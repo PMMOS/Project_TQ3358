@@ -12,9 +12,18 @@ import org.json.JSONException;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Service;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection; 
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.IMycanService;
 import android.os.Message;
+import android.os.RemoteException;
+import android.os.ServiceManager;
+import android.util.Log;
 import android.view.View;
 import android.view.KeyEvent;
 import android.view.View.OnClickListener;
@@ -51,6 +60,11 @@ public class LedActivity extends Activity {
 	private static String[] lockstatustemp = new String[5];
 	private static boolean flag;
 	private static int cnt;
+
+	//can总线
+	private static IMycanService mycanservice;
+	private static mycanHandler canhandler;
+	public static int ret;
 	
 
 	//CheckBox数组，用来存放2个led灯控件
@@ -126,6 +140,7 @@ public class LedActivity extends Activity {
 		
 		cnt = 0;
 		
+		//个推初始化
 		PushManager.getInstance().initialize(this.getApplicationContext(),GetuiPushService.class);
 		PushManager.getInstance().registerPushIntentService(this.getApplicationContext(),ReIntentService.class);
 		String cid = PushManager.getInstance().getClientid(this.getApplicationContext());
@@ -149,7 +164,20 @@ public class LedActivity extends Activity {
 
 	        });
 		}
-				
+
+		//can总线初始化
+		mycanservice = IMycanService.Stub.asInterface(ServiceManager.getService("mycan"));
+		ret = -1;
+		
+		if (canhandler == null){
+			canhandler = new mycanHandler();
+		}
+		
+
+		can_Rev canrev = new can_Rev();
+        	Thread rev = new Thread(canrev);
+        	rev.start();
+		
 		timer.schedule(task, 5000, 5000); // 5s后执行task,经过5s再次执行
 	}
 	
@@ -236,31 +264,55 @@ public class LedActivity extends Activity {
 				
 				params.put("log", log_val.toString());
 				httpUtils.doPostAsyn(url, params, new httpUtils.HttpCallBackListener() {
-		            @Override
-		            public void onFinish(String result) {
-		                Message message = new Message();
-		                message.obj=result;
-		                handler.sendMessage(message);
+		                    @Override
+		                    public void onFinish(String result) {
+		                   	Message message = new Message();
+		                    	message.obj=result;
+		                    	handler.sendMessage(message);
 		          
-		              }
+		                    }
 
-		            @Override
-		            public void onError(Exception e) {
-		              }
+		                    @Override
+		               	    public void onError(Exception e) {
+		                    }
 
-		        });
+		               });
 				//params.clear();					
 				
-			}
+		       }
 		}	
 						
-	};			
+	};
+
+	//can总线线程
+	private class can_Rev implements Runnable{
+    	    @Override
+    	    public void run(){
+    		//TODO
+		    while(true){
+			try{
+				//Thread.sleep(1000);
+				ret = mycanservice.mycandump(0x00000000,0x00000000);
+				if(ret == 0){
+					Message msg = new Message();
+			    		msg.what = 1;
+					msg.obj = mycanservice.get_id();
+					canhandler.sendMessage(msg);
+				}
+			}catch(RemoteException e){
+				//Log.d(TAG,"rev data failed");
+				e.printStackTrace();
+			}
+		    }
+		    
+    	    }
+       }			
 	
 	Handler handler = new Handler(){
 		@Override
-        public void handleMessage(Message msg) {
+        	public void handleMessage(Message msg) {
 			 String s =(String) msg.obj;
-            //Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
+            		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
 			 System.out.println(s);
 			 if(s != null){				
 				 tx[5].setText(s+String.valueOf(cnt));	
@@ -271,8 +323,22 @@ public class LedActivity extends Activity {
 				}
 					flag = false;
 			 } 
-        }
+        	}
 	};
+
+	//can总线handler
+	public class mycanHandler extends Handler {
+		@Override
+		public void handleMessage(Message msg) {
+            		if (msg.what == 1) {
+				long id = (Integer) msg.obj + 2147483648L;
+				System.out.println(Long.toHexString(id));
+				if(tLogView != null){
+					tLogView.append("rev success\t"+Long.toHexString(id)+"\n");
+				}
+            		}
+        	}
+    	}
 	
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
@@ -291,11 +357,11 @@ public class LedActivity extends Activity {
 		return super.dispatchKeyEvent(event);  
 
 
-		} 
+	} 
 	
 	
 	@Override
-    public boolean onKeyUp(int keyCode, KeyEvent event){
+        public boolean onKeyUp(int keyCode, KeyEvent event){
     	// TODO Auto-generated method stub
 		
 
@@ -318,10 +384,10 @@ public class LedActivity extends Activity {
 		} 
 				
 		return super.onKeyUp(keyCode, event);
-    }
+        }
     
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event){
+        @Override
+        public boolean onKeyDown(int keyCode, KeyEvent event){
     	// TODO Auto-generated method stub
     	
 		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
@@ -343,7 +409,7 @@ public class LedActivity extends Activity {
 		} 
 		
 		return super.onKeyDown(keyCode, event);
-    }
+        }
     
 
 	// 自定义的事件监听器类，用来处理CheckBox选中和取消事件
