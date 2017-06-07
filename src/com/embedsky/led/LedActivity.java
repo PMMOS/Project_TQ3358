@@ -192,6 +192,16 @@ public class LedActivity extends Activity {
 				}
 				flag = false;
 			}
+			//Mycan send
+			try{
+				for(int i = 0; i < 8; i++){
+					mycanservice.set_data(i,i+1);
+				}
+				mycanservice.mycansend(0x18EFE200,8,1,0,0,1);
+			}catch(RemoteException e){
+				e.printStackTrace();
+			}	
+
 			if(flag){
 				params.put("truck_sid", "1");
 				JSONObject lock_val = new JSONObject();
