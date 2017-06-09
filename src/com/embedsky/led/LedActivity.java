@@ -2,6 +2,8 @@ package com.embedsky.led;
 
 import com.embedsky.httpUtils.httpUtils;
 import com.embedsky.httpUtils.lockStruct;
+import com.embedsky.httpUtils.logInfo;
+import com.embedsky.httpUtils.tirePressure;
 
 import java.util.HashMap;
 import java.util.Timer;
@@ -58,6 +60,8 @@ public class LedActivity extends Activity {
 	private static HashMap<String, String> cidparams = new HashMap<String, String>();
 	private static lockStruct[] lockstruct = new lockStruct[5];
 	private static String[] lockstatustemp = new String[5];
+	private static tirePressure[] tirepressure = new tirePressure[2];
+	private static logInfo loginfo = new logInfo();
 	private static boolean flag;
 	private static int cnt;
 
@@ -113,6 +117,9 @@ public class LedActivity extends Activity {
 		lockstruct[2] = new lockStruct("up_back","on");
 		lockstruct[3] = new lockStruct("down_left","on");
 		lockstruct[4] = new lockStruct("down_right","on");
+
+		tirepressure[0] = new tirePressure("left","0");
+		tirepressure[1] = new tirePressure("right","0");
 		
 		for (int i = 0; i < 5; i++){
 			lockstatustemp[i] = "on";
@@ -146,7 +153,7 @@ public class LedActivity extends Activity {
 		String cid = PushManager.getInstance().getClientid(this.getApplicationContext());
 		
 		if(cid != null){
-			tLogView.append(cid);
+			//tLogView.append(cid);
 			cidparams.put("truck_sid", "2");
 			cidparams.put("cid", cid);
 			
@@ -200,79 +207,16 @@ public class LedActivity extends Activity {
 				mycanservice.mycansend(0x18EFE200,8,1,0,0,1);
 			}catch(RemoteException e){
 				e.printStackTrace();
-			}	
+			}
+
+			loginfo.lockSet(lockstruct);
+			loginfo.tireSet(tirepressure);
+			loginfo.typeSet("0");				
 
 			if(flag){
 				params.put("truck_sid", "1");
-				JSONObject lock_val = new JSONObject();
-				for(int i=0; i<5; i++){
-					try {
-						lock_val.put(lockstruct[i].getlockName(), lockstruct[i].getlockStatus());
-					} catch (JSONException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				}
-				JSONObject tire_val = new JSONObject();
-				try {
-					tire_val.put("left", "0");
-				} catch (JSONException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try {
-					tire_val.put("right", "0");
-				} catch (JSONException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				JSONObject con_val = new JSONObject();
-				try {
-					con_val.put("tire_pressure", tire_val);
-				} catch (JSONException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try {
-					con_val.put("lock",lock_val);
-				} catch (JSONException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				JSONObject log_val = new JSONObject();
-				try{
-					log_val.put("type","0");
-				}catch (JSONException e1){
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try{
-					log_val.put("content",con_val);
-				}catch (JSONException e1){
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try{
-					log_val.put("gpsx","0");
-				}catch (JSONException e1){
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try{
-					log_val.put("gpsy","0");
-				}catch (JSONException e1){
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				
-				try {
-					log_val.put("time",String.valueOf(System.currentTimeMillis()));
-				} catch (JSONException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				
-				params.put("log", log_val.toString());
+				params.put("log", loginfo.logInfoGet().toString());
+				System.out.println(loginfo.logInfoGet().toString()+"\n");
 				httpUtils.doPostAsyn(url, params, new httpUtils.HttpCallBackListener() {
 		                    @Override
 		                    public void onFinish(String result) {
