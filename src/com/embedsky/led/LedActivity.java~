@@ -6,6 +6,8 @@ import com.embedsky.httpUtils.logInfo;
 import com.embedsky.httpUtils.tirePressure;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -204,19 +206,21 @@ public class LedActivity extends Activity {
 				for(int i = 0; i < 8; i++){
 					mycanservice.set_data(i,i+1);
 				}
-				mycanservice.mycansend(0x18EFE200,8,1,0,0,1);
+				mycanservice.mycansend(0x18DB33F1,8,1,0,0,1);
 			}catch(RemoteException e){
 				e.printStackTrace();
 			}
 
 			loginfo.lockSet(lockstruct);
 			loginfo.tireSet(tirepressure);
-			loginfo.typeSet("0");				
+			loginfo.typeSet("0");	
+
+			//FileInputStream 			
 
 			if(flag){
 				params.put("truck_sid", "1");
 				params.put("log", loginfo.logInfoGet().toString());
-				tLogView.append(loginfo.logInfoGet().toString()+"\n");
+				System.out.println(loginfo.logInfoGet().toString()+"\n");
 				httpUtils.doPostAsyn(url, params, new httpUtils.HttpCallBackListener() {
 		                    @Override
 		                    public void onFinish(String result) {
@@ -249,8 +253,12 @@ public class LedActivity extends Activity {
 				ret = mycanservice.mycandump(0x00000000,0x00000000);
 				if(ret == 0){
 					Message msg = new Message();
-			    		msg.what = 1;
-					msg.obj = mycanservice.get_id();
+			    		msg.what = mycanservice.get_id();
+					List<String> res = new ArrayList<String>();
+					for(int i=0;i<8;i++){
+						res.add(Integer.toHexString(mycanservice.get_data(i)));
+					}
+					msg.obj = res;
 					canhandler.sendMessage(msg);
 				}
 			}catch(RemoteException e){
@@ -284,12 +292,24 @@ public class LedActivity extends Activity {
 	public class mycanHandler extends Handler {
 		@Override
 		public void handleMessage(Message msg) {
-            		if (msg.what == 1) {
-				long id = (Integer) msg.obj + 2147483648L;
+            		if (msg.what != 0) {
+				long id = (Integer) msg.what + 2147483648L;
 				System.out.println(Long.toHexString(id));
-				if(tLogView != null){
-					tLogView.append("rev success\t"+Long.toHexString(id)+"\n");
+				if(id == 0x18FEF433){
+					ArrayList<String> res =(ArrayList<String>) msg.obj;
+					String tirepos = res.get(0);
+					String tirepre = res.get(1);
+					String tiretem = res.get(2)+res.get(3);
+					String tirev = res.get(5)+res.get(6);
+					if(tLogView != null){
+						tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+" "+tiretem+" "+tirev+"\n");
+					}
+				}else{
+					if(tLogView != null){
+						tLogView.append(Long.toHexString(id)+"\n");
+					}
 				}
+				
             		}
         	}
     	}
