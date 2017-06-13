@@ -254,9 +254,9 @@ public class LedActivity extends Activity {
 				if(ret == 0){
 					Message msg = new Message();
 			    		msg.what = mycanservice.get_id();
-					List<String> res = new ArrayList<String>();
+					List<Integer> res = new ArrayList<Integer>();
 					for(int i=0;i<8;i++){
-						res.add(Integer.toHexString(mycanservice.get_data(i)));
+						res.add(mycanservice.get_data(i));
 					}
 					msg.obj = res;
 					canhandler.sendMessage(msg);
@@ -296,13 +296,14 @@ public class LedActivity extends Activity {
 				long id = (Integer) msg.what + 2147483648L;
 				System.out.println(Long.toHexString(id));
 				if(id == 0x18FEF433){
-					ArrayList<String> res =(ArrayList<String>) msg.obj;
-					String tirepos = res.get(0);
-					String tirepre = res.get(1);
-					String tiretem = res.get(2)+res.get(3);
-					String tirev = res.get(5)+res.get(6);
+					ArrayList<Integer> res =(ArrayList<Integer>) msg.obj;
+					int tirepos = res.get(0);
+					int tirepre = res.get(1)*8;
+					double tiretem = ((int)res.get(2)*256+(int)res.get(3))*0.03125-273;
+					double tirev = ((int)res.get(5)*256+(int)res.get(6))*0.1;
+					int tiretype = res.get(7) >> 5;
 					if(tLogView != null){
-						tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+" "+tiretem+" "+tirev+"\n");
+						tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
 				}else{
 					if(tLogView != null){
