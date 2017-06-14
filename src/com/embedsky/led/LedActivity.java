@@ -66,6 +66,8 @@ public class LedActivity extends Activity {
 	private static logInfo loginfo = new logInfo();
 	private static boolean flag;
 	private static int cnt;
+	private static int cansendPid[] = {0x0D,0x2F}; 
+	private static int canCnt;
 
 	//can总线
 	private static IMycanService mycanservice;
@@ -182,7 +184,7 @@ public class LedActivity extends Activity {
 			canhandler = new mycanHandler();
 		}
 		
-
+		canCnt = 0;
 		can_Rev canrev = new can_Rev();
         	Thread rev = new Thread(canrev);
         	rev.start();
@@ -203,10 +205,15 @@ public class LedActivity extends Activity {
 			}
 			//Mycan send
 			try{
-				for(int i = 0; i < 8; i++){
-					mycanservice.set_data(i,i+1);
+				mycanservice.set_data(0,2);
+				mycanservice.set_data(1,1);
+				mycanservice.set_data(2,cansendPid[canCnt%2]);
+				for(int i = 3; i < 8; i++){
+					mycanservice.set_data(i,0);
 				}
 				mycanservice.mycansend(0x18DB33F1,8,1,0,0,1);
+				canCnt += 1;
+				canCnt = canCnt==2?0:1;
 			}catch(RemoteException e){
 				e.printStackTrace();
 			}
@@ -302,8 +309,25 @@ public class LedActivity extends Activity {
 					double tiretem = ((int)res.get(2)*256+(int)res.get(3))*0.03125-273;
 					double tirev = ((int)res.get(5)*256+(int)res.get(6))*0.1;
 					int tiretype = res.get(7) >> 5;
+					tirepressure[tirepos].settireVal(String.valueOf(tirepre));
 					if(tLogView != null){
 						tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
+					}
+				}else if(id == 0x18DAF100){
+					ArrayList<Integer> res = (ArrayList<Integer>) msg.obj;
+					int pid = res.get(2);
+					switch (pid){
+						case 0x0D: int v = res.get(3);
+							  if(tLogView != null){
+								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(v)+"km/s\n");
+							  }
+							  break;
+						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
+							  if(tLogView != null){
+								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(fuelLevel)+"%\n");
+							  }
+							  break;
+						default: break;
 					}
 				}else{
 					if(tLogView != null){
