@@ -129,7 +129,6 @@ public class LedActivity extends Activity {
 			lockstatustemp[i] = "on";
 		}
 		
-		
 		// 退出按钮点击事件处理
 		btnQuit.setOnClickListener(new OnClickListener() {
 			@Override
@@ -275,7 +274,7 @@ public class LedActivity extends Activity {
 		    }
 		    
     	    }
-       }			
+       }		
 	
 	Handler handler = new Handler(){
 		@Override
@@ -440,19 +439,5 @@ public class LedActivity extends Activity {
 
 		}
 	}
-
-	/*******************************************/
-	// 功能：LOCK开/关处理
-	// 参数：
-	// number :LOCK编号
-	// on:true;	off:false
-	/*******************************************/
-	/*private void controlLed(int number, boolean on) {
-		if (on) {
-			ledSetOn(number);
-		} else {
-			ledSetOff(number);
-		}
-	}*/
 
 }

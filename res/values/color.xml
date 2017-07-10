@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="item_pressed">#80888888</color>
+    <color name="theme_color">#ffe97425</color>
+    <color name="transparent">#00000000</color>
+    <color name="through">#00000000</color>
+    <color name="demo_desc">#ff636363</color>
+    <color name="white">#ffffff</color>
+    <color name="black">#000000</color>
+    <color name="gold">#ffd700</color>
+    <color name="gray">#999999</color>
+    <color name="gray_bg">#EFEFEF</color>
+    <color name="gray_bg2">#DFDFDF</color>
+    <color name="blue">#00abf3</color>
+</resources>
