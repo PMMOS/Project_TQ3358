@@ -54,7 +54,7 @@ public class LedActivity extends Activity {
 		System.loadLibrary("led");
 	}
 
-	private static final String LOG_TAG = "ledgps";
+	private static final String LOG_TAG = "lock";
 
 	//初始化led
 	public static native boolean ledInit();
@@ -81,6 +81,8 @@ public class LedActivity extends Activity {
 
 	//gps
 	Location location;
+	private static String gpsx;
+	private static String gpsy;
 
 	//can总线
 	private static IMycanService mycanservice;
@@ -135,8 +137,8 @@ public class LedActivity extends Activity {
 		lockstruct[3] = new lockStruct("down_left","on");
 		lockstruct[4] = new lockStruct("down_right","on");
 
-		tirepressure[0] = new tirePressure("left","0");
-		tirepressure[1] = new tirePressure("right","0");
+		tirepressure[0] = new tirePressure("lefttirepressure","0");
+		tirepressure[1] = new tirePressure("righttirepressure","0");
 		
 		for (int i = 0; i < 5; i++){
 			lockstatustemp[i] = "on";
@@ -171,8 +173,9 @@ public class LedActivity extends Activity {
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("truck_sid", "2");
+			cidparams.put("truck_sid", "1");
 			cidparams.put("cid", cid);
+			Log.d(LOG_TAG, cid);
 			
 			httpUtils.doPostAsyn(getuiurl, cidparams, new httpUtils.HttpCallBackListener() {
 	            @Override
@@ -240,7 +243,7 @@ public class LedActivity extends Activity {
         	Thread rev = new Thread(canrev);
         	rev.start();
 		
-		timer.schedule(task, 5000, 5000); // 5s后执行task,经过5s再次执行
+		timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
 	}
 	
 	Timer timer = new Timer();
@@ -252,7 +255,7 @@ public class LedActivity extends Activity {
 					flag = true;
 					break;
 				}
-				flag = false;
+				//flag = false;
 			}
 			//Mycan send
 			try{
@@ -271,15 +274,16 @@ public class LedActivity extends Activity {
 
 			loginfo.lockSet(lockstruct);
 			loginfo.tireSet(tirepressure);
-			loginfo.typeSet("0");	
+			//loginfo.typeSet("0");	
 
 			//FileInputStream 			
 
-			if(flag){
-				params.put("truck_sid", "1");
-				params.put("log", loginfo.logInfoGet().toString());
+			//if(flag){
+				//params.put("truck_sid", "1");
+				//params.put("log", loginfo.logInfoGet().toString());
 				System.out.println(loginfo.logInfoGet().toString()+"\n");
-				httpUtils.doPostAsyn(url, params, new httpUtils.HttpCallBackListener() {
+				Log.d(LOG_TAG, loginfo.logInfoGet().toString());
+				httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
                     @Override
                     public void onFinish(String result) {
                    	Message message = new Message();
@@ -294,7 +298,7 @@ public class LedActivity extends Activity {
 		        });
 				//params.clear();					
 				
-		    }
+		    //}
 		}							
 	};
 
@@ -302,6 +306,9 @@ public class LedActivity extends Activity {
 	private void updateLocation(Location location){
 		if(location != null){
 			tLogView.append(location.toString());
+			gpsx = Double.toString(location.getLongitude());
+			gpsy = Double.toString(location.getLatitude());
+			loginfo.gpsSet(gpsx,gpsy);
 		}else{
 			Log.d(LOG_TAG, "no location object");
 		}
@@ -341,6 +348,7 @@ public class LedActivity extends Activity {
 			String s =(String) msg.obj;
 	        		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
 			System.out.println(s);
+			Log.d(LOG_TAG, s);
 			if(s != null){				
 				tx[5].setText(s+String.valueOf(cnt));	
 				cnt += 1;
@@ -386,6 +394,7 @@ public class LedActivity extends Activity {
 							  }
 							  break;
 						case 0x0D: int v = res.get(3);
+							  loginfo.speedSet(v);
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(v)+"km/s\n");
 							  }
@@ -395,6 +404,7 @@ public class LedActivity extends Activity {
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
 							  }
 						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
+							  loginfo.fuelvolSet(fuelLevel);
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(fuelLevel)+"%\n");
 							  }

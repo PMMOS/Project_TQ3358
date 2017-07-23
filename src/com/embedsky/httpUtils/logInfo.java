@@ -1,17 +1,27 @@
 package com.embedsky.httpUtils;
 
+import java.util.HashMap;
+
 import org.json.JSONObject;
 import org.json.JSONException;
 
 public class logInfo{
 	private JSONObject lock_val;
-	private JSONObject tire_val;
+	private tirePressure[] tire_val;
 	private String type;
-	//private JSONObject gpsx;
-	//private JSONObject gpsy;
+	private String gpsx;
+	private String gpsy;
+	private String speed;
+	private String fuelvol;
+	private String haswarn;
 	
 	public logInfo(){
 		super();
+		haswarn = "0";
+		speed = "0";
+		gpsx = "0";
+		gpsy = "0";
+		fuelvol = "0";
 	}
 	
 	public void lockSet(lockStruct[] lockstruct){
@@ -26,13 +36,9 @@ public class logInfo{
 	}
 
 	public void tireSet(tirePressure[] tirepressure){
-		tire_val = new JSONObject();
+		tire_val = new tirePressure[tirepressure.length];
 		for (int i=0; i<tirepressure.length; i++){
-			try{
-				tire_val.put(tirepressure[i].gettireName(), tirepressure[i].gettireVal());
-			} catch (JSONException e1){
-				e1.printStackTrace();
-			}
+			tire_val[i] = new tirePressure(tirepressure[i].gettireName(), tirepressure[i].gettireVal());
 		}
 	}
 
@@ -40,21 +46,45 @@ public class logInfo{
 		type = typenum;
 	}
 
-	public JSONObject logInfoGet(){
-		JSONObject log_val = new JSONObject();
-		JSONObject con_val = new JSONObject();
-		try{
-			con_val.put("lock",lock_val);
-			con_val.put("tire_pressure",tire_val);
-			log_val.put("content",con_val);
-			log_val.put("type",type);
-			log_val.put("gpsx","0");
-			log_val.put("gpsy","0");
-			log_val.put("time",String.valueOf(System.currentTimeMillis()));
+	public void gpsSet(String gpsxval, String gpsyval){
+		gpsx = gpsxval;
+		gpsy = gpsyval;
+	}
 
-		} catch (JSONException e1){
-			e1.printStackTrace();
+	public void speedSet(int speedval){
+		speed = String.valueOf(speedval);
+	}
+
+	public void fuelvolSet(double fuelvolval){
+		fuelvol = Double.toString(fuelvolval);
+	}
+
+	public HashMap<String, String> logInfoGet(){
+		HashMap<String, String> log_val = new HashMap<String, String>();
+		//try{
+		if(haswarn.equals("1")){
+			log_val.put("type",type);
+			if(type.equals("1")){
+				log_val.put("lock",lock_val.toString());
+			}else if(type.equals(3)){
+				for(int i = 0; i< tire_val.length; i++){
+					log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
+				}
+			}else if(type.equals(4)){
+				log_val.put("fuelvol",fuelvol);
+			}
 		}
+
+		log_val.put("truck_sid", "1");
+		log_val.put("haswarn",haswarn);
+		log_val.put("speed",speed);
+		log_val.put("gpsx",gpsx);
+		log_val.put("gpsy",gpsy);
+		log_val.put("time",String.valueOf(System.currentTimeMillis()));
+
+		// } catch (JSONException e1){
+		// 	e1.printStackTrace();
+		// }
 		return log_val;
 	}
 }
