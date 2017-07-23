@@ -338,13 +338,8 @@ public class LedActivity extends Activity {
 				}
 		    }
 		    
-<<<<<<< HEAD
-    	    }
-       }		
-=======
-	    }
-    }			
->>>>>>> master
+    	}
+    }		
 	
 	Handler handler = new Handler(){
 		@Override
