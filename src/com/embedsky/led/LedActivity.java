@@ -18,8 +18,16 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection; 
+
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.location.LocationProvider;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -46,6 +54,8 @@ public class LedActivity extends Activity {
 		System.loadLibrary("led");
 	}
 
+	private static final String LOG_TAG = "lock";
+
 	//初始化led
 	public static native boolean ledInit();
 	//关闭led
@@ -68,6 +78,11 @@ public class LedActivity extends Activity {
 	private static int cnt;
 	private static int cansendPid[] = {0x05,0x0C,0x0D,0x21,0x2F}; 
 	private static int canCnt;
+
+	//gps
+	Location location;
+	private static String gpsx;
+	private static String gpsy;
 
 	//can总线
 	private static IMycanService mycanservice;
@@ -122,8 +137,8 @@ public class LedActivity extends Activity {
 		lockstruct[3] = new lockStruct("down_left","on");
 		lockstruct[4] = new lockStruct("down_right","on");
 
-		tirepressure[0] = new tirePressure("left","0");
-		tirepressure[1] = new tirePressure("right","0");
+		tirepressure[0] = new tirePressure("lefttirepressure","0");
+		tirepressure[1] = new tirePressure("righttirepressure","0");
 		
 		for (int i = 0; i < 5; i++){
 			lockstatustemp[i] = "on";
@@ -157,8 +172,9 @@ public class LedActivity extends Activity {
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("truck_sid", "2");
+			cidparams.put("truck_sid", "1");
 			cidparams.put("cid", cid);
+			Log.d(LOG_TAG, cid);
 			
 			httpUtils.doPostAsyn(getuiurl, cidparams, new httpUtils.HttpCallBackListener() {
 	            @Override
@@ -174,6 +190,44 @@ public class LedActivity extends Activity {
 
 	        });
 		}
+		//gps initial
+		LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+		Criteria criteria = new Criteria();
+		criteria.setAccuracy(Criteria.ACCURACY_FINE);
+		criteria.setAltitudeRequired(true);
+		criteria.setBearingRequired(false);
+		criteria.setCostAllowed(true);
+		criteria.setPowerRequirement(Criteria.POWER_LOW);
+		String bestProvider = manager.getBestProvider(criteria,true);
+		Log.d(LOG_TAG, "bestProvider"+bestProvider);
+
+		location = manager.getLastKnownLocation(bestProvider);
+
+		LocationListener locationlistener = new LocationListener(){
+
+			@Override
+			public void onLocationChanged(Location location){
+				Log.d(LOG_TAG,location.toString());
+				updateLocation(location);
+			}
+
+			@Override
+			public void onProviderDisabled(String arg0){
+				Log.e(LOG_TAG, arg0);
+			}
+
+			@Override
+			public void onProviderEnabled(String arg0){
+				Log.i(LOG_TAG, arg0);
+			}
+
+			@Override
+			public void onStatusChanged(String arg0, int arg1, Bundle arg2){
+				Log.i(LOG_TAG, "onStatusChanged");
+			}
+		};
+
+		manager.requestLocationUpdates(bestProvider, 1000, 0, locationlistener);
 
 		//can总线初始化
 		mycanservice = IMycanService.Stub.asInterface(ServiceManager.getService("mycan"));
@@ -188,7 +242,7 @@ public class LedActivity extends Activity {
         	Thread rev = new Thread(canrev);
         	rev.start();
 		
-		timer.schedule(task, 5000, 5000); // 5s后执行task,经过5s再次执行
+		timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
 	}
 	
 	Timer timer = new Timer();
@@ -200,7 +254,7 @@ public class LedActivity extends Activity {
 					flag = true;
 					break;
 				}
-				flag = false;
+				//flag = false;
 			}
 			//Mycan send
 			try{
@@ -219,86 +273,103 @@ public class LedActivity extends Activity {
 
 			loginfo.lockSet(lockstruct);
 			loginfo.tireSet(tirepressure);
-			loginfo.typeSet("0");	
+			//loginfo.typeSet("0");	
 
 			//FileInputStream 			
 
-			if(flag){
-				params.put("truck_sid", "1");
-				params.put("log", loginfo.logInfoGet().toString());
+			//if(flag){
+				//params.put("truck_sid", "1");
+				//params.put("log", loginfo.logInfoGet().toString());
 				System.out.println(loginfo.logInfoGet().toString()+"\n");
-				httpUtils.doPostAsyn(url, params, new httpUtils.HttpCallBackListener() {
-		                    @Override
-		                    public void onFinish(String result) {
-		                   	Message message = new Message();
-		                    	message.obj=result;
-		                    	handler.sendMessage(message);
-		          
-		                    }
+				Log.d(LOG_TAG, loginfo.logInfoGet().toString());
+				httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+                    @Override
+                    public void onFinish(String result) {
+                   	Message message = new Message();
+                    	message.obj=result;
+                    	handler.sendMessage(message);
+          
+                    }
 
-		                    @Override
-		               	    public void onError(Exception e) {
-		                    }
-
-		               });
+                    @Override
+               	    public void onError(Exception e) {
+                    }
+		        });
 				//params.clear();					
 				
-		       }
-		}	
-						
+		    //}
+		}							
 	};
+
+	//gps update
+	private void updateLocation(Location location){
+		if(location != null){
+			tLogView.append(location.toString());
+			gpsx = Double.toString(location.getLongitude());
+			gpsy = Double.toString(location.getLatitude());
+			loginfo.gpsSet(gpsx,gpsy);
+		}else{
+			Log.d(LOG_TAG, "no location object");
+		}
+	}
 
 	//can总线线程
 	private class can_Rev implements Runnable{
-    	    @Override
-    	    public void run(){
+	    @Override
+	    public void run(){
     		//TODO
 		    while(true){
-			try{
-				//Thread.sleep(1000);
-				ret = mycanservice.mycandump(0x00000000,0x00000000);
-				if(ret == 0){
-					Message msg = new Message();
-			    		msg.what = mycanservice.get_id();
-					List<Integer> res = new ArrayList<Integer>();
-					for(int i=0;i<8;i++){
-						res.add(mycanservice.get_data(i));
+				try{
+					//Thread.sleep(1000);
+					ret = mycanservice.mycandump(0x00000000,0x00000000);
+					if(ret == 0){
+						Message msg = new Message();
+				    		msg.what = mycanservice.get_id();
+						List<Integer> res = new ArrayList<Integer>();
+						for(int i=0;i<8;i++){
+							res.add(mycanservice.get_data(i));
+						}
+						msg.obj = res;
+						canhandler.sendMessage(msg);
 					}
-					msg.obj = res;
-					canhandler.sendMessage(msg);
+				}catch(RemoteException e){
+					//Log.d(TAG,"rev data failed");
+					e.printStackTrace();
 				}
-			}catch(RemoteException e){
-				//Log.d(TAG,"rev data failed");
-				e.printStackTrace();
-			}
 		    }
 		    
+<<<<<<< HEAD
     	    }
        }		
+=======
+	    }
+    }			
+>>>>>>> master
 	
 	Handler handler = new Handler(){
 		@Override
-        	public void handleMessage(Message msg) {
-			 String s =(String) msg.obj;
-            		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
-			 System.out.println(s);
-			 if(s != null){				
-				 tx[5].setText(s+String.valueOf(cnt));	
-				 cnt += 1;
-				 //Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
-				 for (int i = 0; i < 5; i++){
+    	public void handleMessage(Message msg) {
+			String s =(String) msg.obj;
+	        		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
+			System.out.println(s);
+			Log.d(LOG_TAG, s);
+			if(s != null){				
+				tx[5].setText(s+String.valueOf(cnt));	
+				cnt += 1;
+				//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
+				for (int i = 0; i < 5; i++){
 					lockstatustemp[i] = lockstruct[i].getlockStatus();
 				}
-					flag = false;
-			 } 
-        	}
+				flag = false;
+			} 
+    	}
 	};
 
 	//can总线handler
 	public class mycanHandler extends Handler {
 		@Override
 		public void handleMessage(Message msg) {
-            		if (msg.what != 0) {
+            if (msg.what != 0) {
 				long id = (Integer) msg.what + 2147483648L;
 				System.out.println(Long.toHexString(id));
 				if(id == 0x18FEF433){
@@ -327,6 +398,7 @@ public class LedActivity extends Activity {
 							  }
 							  break;
 						case 0x0D: int v = res.get(3);
+							  loginfo.speedSet(v);
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(v)+"km/s\n");
 							  }
@@ -336,6 +408,7 @@ public class LedActivity extends Activity {
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
 							  }
 						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
+							  loginfo.fuelvolSet(fuelLevel);
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(fuelLevel)+"%\n");
 							  }
@@ -348,9 +421,9 @@ public class LedActivity extends Activity {
 					}
 				}
 				
-            		}
-        	}
-    	}
+            }
+        }
+    }
 	
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
@@ -367,16 +440,12 @@ public class LedActivity extends Activity {
 		}
 
 		return super.dispatchKeyEvent(event);  
-
-
 	} 
 	
 	
 	@Override
-        public boolean onKeyUp(int keyCode, KeyEvent event){
-    	// TODO Auto-generated method stub
-		
-
+    public boolean onKeyUp(int keyCode, KeyEvent event){
+    	// TODO Auto-generated method stub	
 		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
 			lockstruct[0].setlockStatus("on");
 			tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
@@ -393,13 +462,12 @@ public class LedActivity extends Activity {
 			lockstruct[3].setlockStatus("on");
 			tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
 			return true;
-		} 
-				
+		} 			
 		return super.onKeyUp(keyCode, event);
-        }
+    }
     
-        @Override
-        public boolean onKeyDown(int keyCode, KeyEvent event){
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event){
     	// TODO Auto-generated method stub
     	
 		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
@@ -421,7 +489,7 @@ public class LedActivity extends Activity {
 		} 
 		
 		return super.onKeyDown(keyCode, event);
-        }
+    }
     
 
 	// 自定义的事件监听器类，用来处理CheckBox选中和取消事件

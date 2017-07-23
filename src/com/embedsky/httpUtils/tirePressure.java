@@ -14,6 +14,10 @@ public class tirePressure {
 		this.tireVal = tireVal;		
 	}
 	
+	public void settireName(String tirename){
+		this.tireName = tirename;
+	}
+
 	public void settireVal(String tireVal){
 		this.tireVal = tireVal;
 	}
