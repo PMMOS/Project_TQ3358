@@ -75,7 +75,7 @@ public class logInfo{
 			}
 		}
 
-		log_val.put("truck_sid", "1");
+		log_val.put("truck_sid", "6");
 		log_val.put("haswarn",haswarn);
 		log_val.put("speed",speed);
 		log_val.put("gpsx",gpsx);
