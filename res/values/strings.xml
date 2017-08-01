@@ -3,6 +3,7 @@
 
     <string name="hello">Hello World, LockActivity!</string>
     <string name="app_name">Lock</string>
+    <string name="app_welcome">Welcome</string>
     <string name="cb_Lock1">LOCK1</string>
     <string name="cb_Lock2">LOCK2</string>
     <string name="tx_Lock1">Lock1 Status</string>
@@ -18,7 +19,18 @@
     <string name="tx_devip">IP</string>
     <string name="tx_devport">Port</string>
 
-    <string name="app_welcome">Welcome</string>
+    <string name="tx_recording">recording</string>
+    <string name="tx_warning">warning</string>
+    <string name="tx_tvmain">main source</string>
+    <string name="tx_subsource">sub source</string>
+    <string name="tx_chan1">ch1</string>
+    <string name="tx_chan2">ch2</string>
+    <string name="tx_chan3">ch3</string>
+    <string name="tx_chan4">ch4</string>
+    <string name="tx_chan5">ch5</string>
+    <string name="tx_chan6">ch6</string>
+    <string name="tx_chan7">ch7</string>
+    <string name="tx_chan8">ch8</string>
     
     <string name="common_confirm">OK</string>
     <string name="common_cancel">Cancel</string>

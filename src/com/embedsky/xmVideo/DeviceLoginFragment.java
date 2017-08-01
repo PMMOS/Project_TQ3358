@@ -1,6 +1,8 @@
 package com.embedsky.xmVideo;
 
 import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -32,6 +34,9 @@ public class DeviceLoginFragment extends Fragment{
 	private Context context;
 	private FunDeviceUtils fdu;
 	private View fragmentview;
+	private FragmentManager fgm;
+	private FragmentTransaction fgt;
+	private OnscreenPlayFragment onscreenplayfragment;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -92,6 +97,15 @@ public class DeviceLoginFragment extends Fragment{
 						Log.e(LOG_TAG,"saving FunDevice: "+mFunDevice.getDevIP()+"failed");
 					}
 					tv_logres.setText("device login success");
+					Bundle bundle = new Bundle();
+					bundle.putInt("deviceid", mFunDevice.getId());
+					onscreenplayfragment = new OnscreenPlayFragment();
+					onscreenplayfragment.setArguments(bundle);
+					fgm = getFragmentManager();
+					fgt = fgm.beginTransaction();
+					fgt.replace(R.id.fragment_video, onscreenplayfragment);
+					fgt.addToBackStack(null);
+					fgt.commit();
 				}
 					break;
 				case FunDeviceUtils.MESSAGE_DEVICE_LOGINFAILURED:

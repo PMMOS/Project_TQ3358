@@ -196,7 +196,7 @@ public class LedActivity extends Activity {
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("truck_sid", "1");
+			cidparams.put("truck_sid", "6");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
 			
