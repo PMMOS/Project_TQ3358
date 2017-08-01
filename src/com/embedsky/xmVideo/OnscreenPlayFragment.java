@@ -113,8 +113,8 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	public void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 		context = getActivity().getApplicationContext();
-		SharedPreferences userinfodata = getSharedPreferences(SPNames.UserInfo.getValue(), Context.MODE_PRIVATE);
-		hasES = userinfodata.getString(UserInfoItems.localPath.getValue(), null);
+		SharedPreferences userinfodata = getActivity().getSharedPreferences(SPNames.UserInfo.getValue(), Context.MODE_PRIVATE);
+		hasES = userinfodata.getBoolean(UserInfoItems.hasES.getValue(), false);
 		if(hasES){
 			localpath = userinfodata.getString(UserInfoItems.localPath.getValue(), null);
 			if(localpath == null)
@@ -129,12 +129,12 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		Log.d(LOG_TAG, "Onescreen onCreateView");
 		initview();
 		return fragmentview;
-
 	}
 
 	@Override
 	public void onStart(){
 		//TODO data get
+		super.onStart();
 		type = getArguments().getInt("type", 0);
 		if(type == 0){
 			int devId = getArguments().getInt("deviceid", 0);
@@ -843,7 +843,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	};
 
 	private void toastScreenShotPreview(final String path) {
-		View view = getLayoutInflater().inflate(R.layout.screenshot_preview, null, false);
+		View view = getActivity().getLayoutInflater().inflate(R.layout.screenshot_preview, null, false);
 		ImageView iv = (ImageView) view.findViewById(R.id.iv_screenshot_preview);
 		BitmapFactory.Options options = new BitmapFactory.Options();
 		options.inJustDecodeBounds = false;
@@ -851,7 +851,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		options.inDither = true;
 		Bitmap bitmap = BitmapFactory.decodeFile(path);
 		iv.setImageBitmap(bitmap);
-		new AlertDialog.Builder(this).setTitle(R.string.device_socket_capture_preview).setView(view)
+		new AlertDialog.Builder(getActivity()).setTitle(R.string.device_socket_capture_preview).setView(view)
 				.setPositiveButton(R.string.device_socket_capture_save, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
@@ -874,7 +874,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	}
 
 	private void toastRecordSucess(final String path) {
-		new AlertDialog.Builder(fragmentview).setTitle(R.string.device_sport_camera_record_success)
+		new AlertDialog.Builder(getActivity()).setTitle(R.string.device_sport_camera_record_success)
 				.setMessage(getString(R.string.media_record_stop) + path)
 				.setPositiveButton(R.string.device_sport_camera_record_success_open,
 						new DialogInterface.OnClickListener() {

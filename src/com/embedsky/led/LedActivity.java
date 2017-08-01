@@ -82,7 +82,7 @@ public class LedActivity extends Activity {
 	
 	private String url="http://120.76.219.196:85/trucklogs/add_log";
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
-	private String getuiurl = "http://120.76.219.196:85/getui/post";
+	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
 	private static HashMap<String, String> params = new HashMap<String, String>();
 	private static HashMap<String, String> cidparams = new HashMap<String, String>();
 	private static lockStruct[] lockstruct = new lockStruct[5];
@@ -103,6 +103,8 @@ public class LedActivity extends Activity {
 	private static IMycanService mycanservice;
 	private static mycanHandler canhandler;
 	public static int ret;
+	private static int distance0;
+	private static int disCnt;
 
 	//video
 	private Context context;
@@ -196,7 +198,8 @@ public class LedActivity extends Activity {
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("truck_sid", "6");
+			cidparams.put("sid","11");
+			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
 			
@@ -214,6 +217,7 @@ public class LedActivity extends Activity {
 
 	        });
 		}
+
 		//gps initial
 		LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 		Criteria criteria = new Criteria();
@@ -262,6 +266,7 @@ public class LedActivity extends Activity {
 		}
 		
 		canCnt = 0;
+		disCnt = 0;
 		can_Rev canrev = new can_Rev();
         	Thread rev = new Thread(canrev);
         	rev.start();
@@ -447,6 +452,12 @@ public class LedActivity extends Activity {
 							  }
 							  break;
 						case 0x21: int distance = (int)res.get(3)*256+(int)res.get(4);
+							  if(disCnt == 0){
+							  	distance0 = distance;
+							  	disCnt = 1;
+							  }else{
+							  	loginfo.distanceSet(distance-distance0);
+							  }
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
 							  }
