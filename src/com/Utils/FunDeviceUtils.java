@@ -1,0 +1,316 @@
+package com.Utils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.Utils.SharedPreferencesNames.FunDevicesItems;
+import com.Utils.SharedPreferencesNames.SPNames;
+import com.embedsky.led.R;
+import com.lib.FunSDK;
+import com.lib.SDKCONST;
+import com.lib.funsdk.support.FunDevicePassword;
+import com.lib.funsdk.support.FunError;
+import com.lib.funsdk.support.FunSupport;
+import com.lib.funsdk.support.OnFunDeviceOptListener;
+import com.lib.funsdk.support.OnFunDeviceRecordListener;
+import com.lib.funsdk.support.config.OPCompressPic;
+import com.lib.funsdk.support.config.OPPTZControl;
+import com.lib.funsdk.support.config.SystemInfo;
+import com.lib.funsdk.support.models.FunDevRecordFile;
+import com.lib.funsdk.support.models.FunDevice;
+import com.lib.funsdk.support.models.FunFileData;
+import com.lib.funsdk.support.utils.MyUtils;
+import com.lib.sdk.struct.H264_DVR_FILE_DATA;
+import com.lib.sdk.struct.H264_DVR_FINDINFO;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Message;
+
+public class FunDeviceUtils implements OnFunDeviceOptListener, OnFunDeviceRecordListener {
+	private String NativeLoginPsw;
+	private Context context;
+	private FunDevice LoginFunDevice, QueryFunDevice;
+	private Handler handler;
+	
+	public static final int MESSAGE_DEVICE_LOGINSUCCEED = 1;
+	public static final int MESSAGE_DEVICE_LOGINFAILURED = 2;
+	public static final int MESSAGE_RECORD_QUERYBYFILE = 3;
+	public static final int MESSAGE_RECORD_QUERYBYTIME = 4;
+	public static final int MESSAGE_RECORD_QUERYFAILURED = 5;
+
+	public FunDeviceUtils(Context context, Handler handler) {
+		this.context = context;
+		this.handler = handler;
+		FunSupport.getInstance().registerOnFunDeviceOptListener(this);
+	}
+	
+	public void OnResume(){
+		FunSupport.getInstance().registerOnFunDeviceOptListener(this);
+	}
+	
+	public void OnDestory(){
+		FunSupport.getInstance().removeOnFunDeviceOptListener(this);
+	}
+
+	public void DeviceLogin(FunDevice funDevice) {
+		this.LoginFunDevice = funDevice;
+		if(LoginFunDevice != null){
+			if (!LoginFunDevice.hasLogin() || !LoginFunDevice.hasConnected()) {
+				loginDevice();
+			} else {
+				requestSystemInfo();
+			}
+		}else
+			System.err.println("in DeviceLogin,device == null");
+	}
+
+	public boolean saveDevice(FunDevice funDevice) {
+		try {
+			SharedPreferences sharedPreferences = context.getSharedPreferences(SPNames.FunDevices.getValue(), Context.MODE_PRIVATE);
+			String tmpstr = sharedPreferences.getString(FunDevicesItems.FunDevices.getValue(), null);
+			JSONArray jsonArray = null;
+			if (tmpstr == null)
+				jsonArray = new JSONArray();
+			else
+				jsonArray = new JSONArray(tmpstr);
+			JSONObject jsonObject = funDevice.getJson();
+			if(jsonObject == null)
+				return false;
+			else{
+				int thisid = funDevice.getId();
+				for(int i = 0; i < jsonArray.length(); i++){
+					JSONObject jsonObject2 = jsonArray.getJSONObject(i);
+					if(thisid == jsonObject2.getInt("id"))
+						return true;
+				}
+				jsonArray.put(jsonObject);
+				sharedPreferences.edit().putString(FunDevicesItems.FunDevices.getValue(), jsonArray.toString()).commit();
+				return true;
+			}
+		} catch (JSONException e) {
+			return false;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public List<FunDevice> loadDevices() {
+		return this.loadDevices(null);
+	}
+	
+	public List<FunDevice> loadDevices(List<FunDevice> devices) {
+		if(devices == null)
+			devices = new ArrayList<FunDevice>();
+		else
+			devices.clear();
+		SharedPreferences sharedPreferences = context.getSharedPreferences(SPNames.FunDevices.getValue(), Context.MODE_PRIVATE);
+		String tmpstr = sharedPreferences.getString(FunDevicesItems.FunDevices.getValue(), null);
+		if(tmpstr == null)
+			return devices;
+		else {
+			try {
+				JSONArray jsonArray = new JSONArray(tmpstr);
+				for(int i = 0; i < jsonArray.length(); i++){
+					JSONObject jsonObject = jsonArray.getJSONObject(i);
+					int id = jsonObject.getInt("id");
+					FunDevice funDevice = FunSupport.getInstance().findDeviceById(id);
+					if(funDevice != null){
+						if(funDevice.hasLogin())
+							devices.add(funDevice);
+					} else {
+						System.err.println("In loadDevices,funDevice == null");
+					}
+				}
+				return devices;
+			} catch (JSONException e) {
+				System.err.println("In loadDevices,JSONException");
+				devices.clear();
+				return devices;
+			}
+		}
+	}
+
+	public void queryRecord(FunDevice funDevice){
+		int[] starttime = {1999, 1, 1};
+		queryRecord(funDevice, starttime);
+	}
+	
+	public void queryRecord(FunDevice funDevice, int[] starttime){
+		String datestr = Utils.getCurrentdate();
+		String[] tmp = datestr.split("-"); 
+		int[] endtime = new int[3];
+		endtime[0] = Integer.parseInt(tmp[0]);
+		endtime[1] = Integer.parseInt(tmp[1]);
+		endtime[2] = Integer.parseInt(tmp[2]);
+		queryRecord(funDevice, starttime, endtime);
+	}
+	
+	public void queryRecord(FunDevice funDevice, int[] starttime, int[] endtime){
+		if(funDevice == null)
+			return;
+		this.QueryFunDevice = funDevice;
+		H264_DVR_FINDINFO info = new H264_DVR_FINDINFO();
+        info.st_1_nFileType = SDKCONST.FileType.SDK_RECORD_ALL;
+		//info.st_1_nFileType = SDKCONST.FileType.SDK_PIC_ALL;
+        info.st_2_startTime.st_0_dwYear = starttime[0];
+        info.st_2_startTime.st_1_dwMonth = starttime[1];
+        info.st_2_startTime.st_2_dwDay = starttime[2];
+        info.st_2_startTime.st_3_dwHour = 0;
+        info.st_2_startTime.st_4_dwMinute = 0;
+        info.st_2_startTime.st_5_dwSecond = 0;
+        info.st_3_endTime.st_0_dwYear = endtime[0];
+        info.st_3_endTime.st_1_dwMonth = endtime[1];
+        info.st_3_endTime.st_2_dwDay = endtime[2];
+        info.st_3_endTime.st_3_dwHour = 23;
+        info.st_3_endTime.st_4_dwMinute = 59;
+        info.st_3_endTime.st_5_dwSecond = 59;
+        info.st_0_nChannelN0 = funDevice.CurrChannel;
+        FunSupport.getInstance().requestDeviceFileList(funDevice, info);
+	}
+	
+	private void loginDevice() {
+		if(LoginFunDevice != null)
+			FunSupport.getInstance().requestDeviceLogin(LoginFunDevice);
+		else
+			System.err.println("in loginDevice,device == null");
+	}
+
+	private void requestSystemInfo() {
+		if(LoginFunDevice != null)
+			FunSupport.getInstance().requestDeviceConfig(LoginFunDevice, SystemInfo.CONFIG_NAME);
+		else
+			System.err.println("in requestSystemInfo,device == null");
+	}
+
+	private void onDeviceSaveNativePws() {
+		FunDevicePassword.getInstance().saveDevicePassword(LoginFunDevice.getDevSn(), NativeLoginPsw);
+		// 库函数方式本地保存密码
+		if (FunSupport.getInstance().getSaveNativePassword()) {
+			FunSDK.DevSetLocalPwd(LoginFunDevice.getDevSn(), "admin", NativeLoginPsw);
+			// 如果设置了使用本地保存密码，则将密码保存到本地文件
+		}
+	}
+
+	@Override
+	public void onDeviceLoginSuccess(FunDevice funDevice) {
+		if (null != LoginFunDevice && null != funDevice) {
+			if (LoginFunDevice.getId() == funDevice.getId()) {
+				// 如果是新输入密码登录成功,保存当前密码
+				String devicePasswd = FunDevicePassword.getInstance().getDevicePassword(funDevice.getDevSn());
+				if (devicePasswd == null || FunSupport.getInstance().NativeLoginPsw == null) {
+					NativeLoginPsw = FunSupport.getInstance().NativeLoginPsw;
+					onDeviceSaveNativePws();
+				} else if (!devicePasswd.equals(FunSupport.getInstance().NativeLoginPsw)) {
+					NativeLoginPsw = FunSupport.getInstance().NativeLoginPsw;
+					onDeviceSaveNativePws();
+				}
+				requestSystemInfo();
+			}
+		}
+	}
+
+	@Override
+	public void onDeviceLoginFailed(FunDevice funDevice, Integer errCode) {
+		Utils.showToast(context, FunError.getErrorStr(errCode));
+	}
+
+	@Override
+	public void onDeviceGetConfigSuccess(FunDevice funDevice, String configName, int nSeq) {
+		if (SystemInfo.CONFIG_NAME.equals(configName)) {
+			if (funDevice.channel == null) {
+				FunSupport.getInstance().requestGetDevChnName(funDevice);
+				requestSystemInfo();
+				return;
+			}
+			// 获取信息成功后,如果WiFi连接了就自动播放
+			// 此处逻辑客户自定义
+			if (MyUtils.detectWifiNetwork(context)) {
+				handler.sendEmptyMessage(MESSAGE_DEVICE_LOGINSUCCEED);
+			} else {
+				Utils.showToast(context, R.string.meida_not_auto_play_because_no_wifi);
+				//Utils.showToast(context, "media not auto play because no wifi");
+			}
+		}
+	}
+
+	@Override
+	public void onDeviceGetConfigFailed(FunDevice funDevice, Integer errCode) {
+	}
+
+	@Override
+	public void onDeviceSetConfigSuccess(FunDevice funDevice, String configName) {
+	}
+
+	@Override
+	public void onDeviceSetConfigFailed(FunDevice funDevice, String configName, Integer errCode) {
+		if (OPPTZControl.CONFIG_NAME.equals(configName)) {
+			Utils.showToast(context, R.string.user_set_preset_fail);
+			//Utils.showToast(context,"user set preset fail");
+		}
+	}
+
+	@Override
+	public void onDeviceChangeInfoSuccess(FunDevice funDevice) {}
+
+	@Override
+	public void onDeviceChangeInfoFailed(FunDevice funDevice, Integer errCode) {}
+
+	@Override
+	public void onDeviceOptionSuccess(FunDevice funDevice, String option) {}
+
+	@Override
+	public void onDeviceOptionFailed(FunDevice funDevice, String option, Integer errCode) {}
+
+	@Override
+	public void onDeviceFileListChanged(FunDevice funDevice) {}
+
+	@Override
+	public void onDeviceFileListChanged(FunDevice funDevice, H264_DVR_FILE_DATA[] datas) {
+		System.err.println("in onDeviceFileListChanged");
+		List<FunFileData> files = new ArrayList<FunFileData>();
+
+        if (null != funDevice
+                && null != QueryFunDevice
+                && funDevice.getId() == QueryFunDevice.getId()) {
+
+            for (H264_DVR_FILE_DATA data : datas) {
+                FunFileData funFileData = new FunFileData(data, new OPCompressPic());
+                files.add(funFileData);
+            }
+
+            if (files.size() == 0) {
+                Utils.showToast(context, R.string.device_camera_video_list_empty);
+		//Utils.showToast(context,"device camera video list empty");
+            } else {
+            	Message message = Message.obtain();
+                message.what = MESSAGE_RECORD_QUERYBYFILE;
+                message.obj = files;
+        		handler.sendMessage(message);
+            }
+        }
+	}
+
+	@Override
+	public void onRequestRecordListSuccess(List<FunDevRecordFile> files) {
+		System.err.println("in onRequestRecordListSuccess");
+		if (files == null || files.size() == 0) {
+            Utils.showToast(context, R.string.device_camera_video_list_empty);
+		//Utils.showToast(context, "device camera video list empty");
+        }
+        Message message = Message.obtain();
+        message.what = MESSAGE_RECORD_QUERYBYTIME;
+        message.obj = files;
+		handler.sendMessage(message);
+	}
+
+	@Override
+	public void onRequestRecordListFailed(Integer errCode) {
+		handler.sendEmptyMessage(MESSAGE_RECORD_QUERYFAILURED);
+	}
+}

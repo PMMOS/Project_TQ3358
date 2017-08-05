@@ -5,6 +5,17 @@ import com.embedsky.httpUtils.lockStruct;
 import com.embedsky.httpUtils.logInfo;
 import com.embedsky.httpUtils.tirePressure;
 
+import com.embedsky.xmVideo.DeviceLoginFragment;
+
+import com.lib.funsdk.support.FunSupport;
+
+import com.Utils.FunDeviceUtils;
+import com.Utils.SharedPreferencesNames.SPNames;
+import com.Utils.SharedPreferencesNames.UserInfoItems;
+import com.Utils.Utils;
+
+import java.io.File;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -16,11 +27,14 @@ import org.json.JSONException;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection; 
+import android.content.SharedPreferences;
 
 import android.location.Criteria;
 import android.location.Location;
@@ -29,6 +43,7 @@ import android.location.LocationManager;
 import android.location.LocationProvider;
 
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.IMycanService;
@@ -67,7 +82,7 @@ public class LedActivity extends Activity {
 	
 	private String url="http://120.76.219.196:85/trucklogs/add_log";
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
-	private String getuiurl = "http://120.76.219.196:85/getui/post";
+	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
 	private static HashMap<String, String> params = new HashMap<String, String>();
 	private static HashMap<String, String> cidparams = new HashMap<String, String>();
 	private static lockStruct[] lockstruct = new lockStruct[5];
@@ -88,6 +103,15 @@ public class LedActivity extends Activity {
 	private static IMycanService mycanservice;
 	private static mycanHandler canhandler;
 	public static int ret;
+	private static int distance0;
+	private static int disCnt;
+
+	//video
+	private Context context;
+	private FunDeviceUtils fdu;
+	private FragmentManager fgm;
+	private FragmentTransaction fgt;
+	private DeviceLoginFragment devlogfragment;
 	
 
 	//CheckBox数组，用来存放2个led灯控件
@@ -103,6 +127,8 @@ public class LedActivity extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+
+		context = LedActivity.this.getApplicationContext();
 		
 		
 		//获取xml中对应的控件
@@ -144,7 +170,6 @@ public class LedActivity extends Activity {
 			lockstatustemp[i] = "on";
 		}
 		
-		
 		// 退出按钮点击事件处理
 		btnQuit.setOnClickListener(new OnClickListener() {
 			@Override
@@ -173,7 +198,8 @@ public class LedActivity extends Activity {
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("truck_sid", "6");
+			cidparams.put("sid","11");
+			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
 			
@@ -191,6 +217,7 @@ public class LedActivity extends Activity {
 
 	        });
 		}
+
 		//gps initial
 		LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 		Criteria criteria = new Criteria();
@@ -239,9 +266,37 @@ public class LedActivity extends Activity {
 		}
 		
 		canCnt = 0;
+		disCnt = 0;
 		can_Rev canrev = new can_Rev();
         	Thread rev = new Thread(canrev);
         	rev.start();
+
+        //video initial
+        FunSupport.getInstance().init(context);
+        SharedPreferences sharedPreferences = getSharedPreferences(SPNames.UserInfo.getValue(), Context.MODE_PRIVATE);
+        File f = new File("root"+File.separator+"mnt");
+        if(!f.exists()){
+        //if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+        	Utils.showToast(context,"no SD card");
+        	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), false).commit();
+        }else{
+        	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), true).commit();
+        	sharedPreferences.edit().putString(UserInfoItems.localPath.getValue(), 
+        		"root"+File.separator+"mnt"+File.separator+"xmlocal"+File.separator).commit();
+        		//Environment.getExternalStorageDirectory().toString()+File.separator+"xmlocal"+File.separator).commit();
+        }
+        if(findViewById(R.id.fragment_video) != null){
+        	if(savedInstanceState != null){
+        		return;
+        	}
+
+        	devlogfragment = new DeviceLoginFragment();
+        	devlogfragment.setArguments(getIntent().getExtras());
+        	fgm = getFragmentManager();
+        	fgt = fgm.beginTransaction();
+        	fgt.add(R.id.fragment_video, devlogfragment).commit();
+        	Log.d(LOG_TAG,"fragment create");
+        }
 		
 		timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
 	}
@@ -339,15 +394,15 @@ public class LedActivity extends Activity {
 				}
 		    }
 		    
-	    }
-    }			
+    	}
+    }		
 	
 	Handler handler = new Handler(){
 		@Override
     	public void handleMessage(Message msg) {
 			String s =(String) msg.obj;
 	        		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
-			System.out.println(s);
+			//System.out.println(s);
 			Log.d(LOG_TAG, s);
 			if(s != null){				
 				tx[5].setText(s+String.valueOf(cnt));	
@@ -400,6 +455,12 @@ public class LedActivity extends Activity {
 							  }
 							  break;
 						case 0x21: int distance = (int)res.get(3)*256+(int)res.get(4);
+							  if(disCnt == 0){
+							  	distance0 = distance;
+							  	disCnt = 1;
+							  }else{
+							  	loginfo.distanceSet(distance-distance0);
+							  }
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
 							  }
@@ -487,6 +548,11 @@ public class LedActivity extends Activity {
 		return super.onKeyDown(keyCode, event);
     }
     
+    @Override
+    protected void onDestroy(){
+    	fdu.OnDestory();
+    	super.onDestroy();
+    }
 
 	// 自定义的事件监听器类，用来处理CheckBox选中和取消事件
 	public class MyClickListener implements OnClickListener {
@@ -503,19 +569,5 @@ public class LedActivity extends Activity {
 
 		}
 	}
-
-	/*******************************************/
-	// 功能：LOCK开/关处理
-	// 参数：
-	// number :LOCK编号
-	// on:true;	off:false
-	/*******************************************/
-	/*private void controlLed(int number, boolean on) {
-		if (on) {
-			ledSetOn(number);
-		} else {
-			ledSetOff(number);
-		}
-	}*/
 
 }

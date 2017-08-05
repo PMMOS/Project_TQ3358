@@ -14,6 +14,7 @@ public class logInfo{
 	private String speed;
 	private String fuelvol;
 	private String haswarn;
+	private String distance;
 	
 	public logInfo(){
 		super();
@@ -22,6 +23,7 @@ public class logInfo{
 		gpsx = "0";
 		gpsy = "0";
 		fuelvol = "0";
+		distance = "0";
 	}
 	
 	public void lockSet(lockStruct[] lockstruct){
@@ -59,6 +61,10 @@ public class logInfo{
 		fuelvol = Double.toString(fuelvolval);
 	}
 
+	public void distanceSet(int distanceval){
+		distance = String.valueOf(distanceval);
+	}
+
 	public HashMap<String, String> logInfoGet(){
 		HashMap<String, String> log_val = new HashMap<String, String>();
 		//try{
@@ -75,11 +81,13 @@ public class logInfo{
 			}
 		}
 
-		log_val.put("truck_sid", "6");
+
+		log_val.put("trucksid", "23");
 		log_val.put("haswarn",haswarn);
 		log_val.put("speed",speed);
 		log_val.put("gpsx",gpsx);
 		log_val.put("gpsy",gpsy);
+		log_val.put("mile",distance);
 		log_val.put("time",String.valueOf(System.currentTimeMillis()));
 
 		// } catch (JSONException e1){
