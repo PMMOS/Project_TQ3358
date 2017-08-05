@@ -3,7 +3,7 @@
     package="com.embedsky.led"
     android:versionCode="1"
     android:versionName="1.0" 
-    android:sharedUserId="android.uid.system">
+    android:sharedUserId="android.uid.system" >
 
     <uses-sdk 
         android:minSdkVersion="10" 
@@ -16,6 +16,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE"/>
+    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
     <!-- 个推SDK权限配置开始 -->
 	<!-- <uses-permission android:name="android.permission.INTERNET" />  -->
 	<uses-permission android:name="android.permission.READ_PHONE_STATE" />

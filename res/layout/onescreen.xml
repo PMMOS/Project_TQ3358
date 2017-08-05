@@ -380,7 +380,7 @@
             android:text="@string/tx_chan4"
             android:textColor="#ffffff" />
 
-        <TextView
+        <!--TextView
             android:id="@+id/tv_channel5"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -430,7 +430,7 @@
             android:background="#000000"
             android:padding="5dip"
             android:text="@string/tx_chan8"
-            android:textColor="#ffffff" />
+            android:textColor="#ffffff" /-->
 
         <TextView
             android:id="@+id/tv_selectchannel"

@@ -31,6 +31,8 @@
     <string name="tx_chan6">ch6</string>
     <string name="tx_chan7">ch7</string>
     <string name="tx_chan8">ch8</string>
+
+    <string name="tv_title">Multiscreen video</string>
     
     <string name="common_confirm">OK</string>
     <string name="common_cancel">Cancel</string>

@@ -30,6 +30,8 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -97,8 +99,8 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	private RelativeLayout layout_warning, layout_recording, layout_suspension;
 	private LinearLayout layout_control1, layout_control2;
 	private TextView tv_mainsource, tv_subsource, tv_selectsource;
-	private TextView tv_channel1, tv_channel2, tv_channel3, tv_channel4;
-	private TextView tv_channel5, tv_channel6, tv_channel7, tv_channel8, tv_selectchannel;
+	private TextView tv_channel1, tv_channel2, tv_channel3, tv_channel4, tv_selectchannel;
+	// private TextView tv_channel5, tv_channel6, tv_channel7, tv_channel8;
 	private boolean isChannelShowing = false, isSourceShowing = false, isControlShowing = false;
 	private boolean isChannelAnimating = false, isSourceAnimating = false;
 	private boolean isPlaying = false, hasES;
@@ -108,6 +110,10 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	private LocalRecord localRecord;
 	private WarnInfo warnInfo;
 	private String[] localRecordtime, localCapturetime, warnInfotime;
+
+	private FragmentManager fgm;
+	private FragmentTransaction fgt;
+	private MulscreenPlayFragment mulscreenplayfragment;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState){
@@ -193,10 +199,10 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		tv_channel2 = (TextView) fragmentview.findViewById(R.id.tv_channel2);
 		tv_channel3 = (TextView) fragmentview.findViewById(R.id.tv_channel3);
 		tv_channel4 = (TextView) fragmentview.findViewById(R.id.tv_channel4);
-		tv_channel5 = (TextView) fragmentview.findViewById(R.id.tv_channel5);
-		tv_channel6 = (TextView) fragmentview.findViewById(R.id.tv_channel6);
-		tv_channel7 = (TextView) fragmentview.findViewById(R.id.tv_channel7);
-		tv_channel8 = (TextView) fragmentview.findViewById(R.id.tv_channel8);
+		// tv_channel5 = (TextView) fragmentview.findViewById(R.id.tv_channel5);
+		// tv_channel6 = (TextView) fragmentview.findViewById(R.id.tv_channel6);
+		// tv_channel7 = (TextView) fragmentview.findViewById(R.id.tv_channel7);
+		// tv_channel8 = (TextView) fragmentview.findViewById(R.id.tv_channel8);
 		tv_selectchannel = (TextView) fragmentview.findViewById(R.id.tv_selectchannel);
 
 		mFunVideoView.setOnErrorListener(this);
@@ -217,18 +223,18 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		tv_channel2.setOnClickListener(this);
 		tv_channel3.setOnClickListener(this);
 		tv_channel4.setOnClickListener(this);
-		tv_channel5.setOnClickListener(this);
-		tv_channel6.setOnClickListener(this);
-		tv_channel7.setOnClickListener(this);
-		tv_channel8.setOnClickListener(this);
+		// tv_channel5.setOnClickListener(this);
+		// tv_channel6.setOnClickListener(this);
+		// tv_channel7.setOnClickListener(this);
+		// tv_channel8.setOnClickListener(this);
 		tv_channel1.setTag(1001);
 		tv_channel2.setTag(1002);
 		tv_channel3.setTag(1003);
 		tv_channel4.setTag(1004);
-		tv_channel5.setTag(1005);
-		tv_channel6.setTag(1006);
-		tv_channel7.setTag(1007);
-		tv_channel8.setTag(1008);
+		// tv_channel5.setTag(1005);
+		// tv_channel6.setTag(1006);
+		// tv_channel7.setTag(1007);
+		// tv_channel8.setTag(1008);
 		tv_selectchannel.setOnClickListener(this);
 		setPlaystop(false);
 		showControl();
@@ -331,16 +337,16 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		mFunVideoView.setMediaSound(true);
 		
 		if (FunStreamType.STREAM_SECONDARY == mFunVideoView.getStreamType()) {
-			tv_selectsource.setText("辅码流");
+			tv_selectsource.setText("subsource");
 			tv_subsource.setTextColor(context.getResources().getColor(R.color.blue));
 			tv_mainsource.setTextColor(context.getResources().getColor(R.color.white));
 		} else {
-			tv_selectsource.setText("主码流");
+			tv_selectsource.setText("mainsource");
 			tv_subsource.setTextColor(context.getResources().getColor(R.color.white));
 			tv_mainsource.setTextColor(context.getResources().getColor(R.color.blue));
 		}
-		tv_selectchannel.setText((mFunDevice.CurrChannel+1) + "通道");
-		for(int i = 1; i <= 8; i++){
+		tv_selectchannel.setText("ch"+(mFunDevice.CurrChannel+1));
+		for(int i = 1; i <= 4; i++){
 			TextView tv_now = (TextView) layout_suspension.findViewWithTag(1000+i);
 			if(mFunDevice.CurrChannel+1 == i)
 				tv_now.setTextColor(context.getResources().getColor(R.color.blue));
@@ -409,19 +415,20 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 			isChannelShowing = true;
 			tv_selectchannel.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED);
 			int width = tv_selectchannel.getMeasuredWidth();
-			ObjectAnimator Animator1 = ObjectAnimator.ofFloat(tv_channel1, "translationX", 0, -(width + 40) * 8);
-			ObjectAnimator Animator2 = ObjectAnimator.ofFloat(tv_channel2, "translationX", 0, -(width + 40) * 7);
-			ObjectAnimator Animator3 = ObjectAnimator.ofFloat(tv_channel3, "translationX", 0, -(width + 40) * 6);
-			ObjectAnimator Animator4 = ObjectAnimator.ofFloat(tv_channel4, "translationX", 0, -(width + 40) * 5);
-			ObjectAnimator Animator5 = ObjectAnimator.ofFloat(tv_channel5, "translationX", 0, -(width + 40) * 4);
-			ObjectAnimator Animator6 = ObjectAnimator.ofFloat(tv_channel6, "translationX", 0, -(width + 40) * 3);
-			ObjectAnimator Animator7 = ObjectAnimator.ofFloat(tv_channel7, "translationX", 0, -(width + 40) * 2);
-			ObjectAnimator Animator8 = ObjectAnimator.ofFloat(tv_channel8, "translationX", 0, -(width + 40) * 1);
+			ObjectAnimator Animator1 = ObjectAnimator.ofFloat(tv_channel1, "translationX", 0, -(width + 40) * 4);
+			ObjectAnimator Animator2 = ObjectAnimator.ofFloat(tv_channel2, "translationX", 0, -(width + 40) * 3);
+			ObjectAnimator Animator3 = ObjectAnimator.ofFloat(tv_channel3, "translationX", 0, -(width + 40) * 2);
+			ObjectAnimator Animator4 = ObjectAnimator.ofFloat(tv_channel4, "translationX", 0, -(width + 40) * 1);
+			// ObjectAnimator Animator5 = ObjectAnimator.ofFloat(tv_channel5, "translationX", 0, -(width + 40) * 4);
+			// ObjectAnimator Animator6 = ObjectAnimator.ofFloat(tv_channel6, "translationX", 0, -(width + 40) * 3);
+			// ObjectAnimator Animator7 = ObjectAnimator.ofFloat(tv_channel7, "translationX", 0, -(width + 40) * 2);
+			// ObjectAnimator Animator8 = ObjectAnimator.ofFloat(tv_channel8, "translationX", 0, -(width + 40) * 1);
 			AnimatorSet animatorSet = new AnimatorSet();
 			animatorSet.setDuration(500);
 			animatorSet.setInterpolator(new OvershootInterpolator());
-			animatorSet.playTogether(Animator1, Animator2, Animator3, Animator4, Animator5, Animator6, Animator7,
-					Animator8);
+			animatorSet.playTogether(Animator1, Animator2, Animator3, Animator4);
+			// , Animator5, Animator6, Animator7,
+			// 		Animator8);
 			animatorSet.addListener(new AnimatorListenerAdapter() {
 				@Override
 				public void onAnimationEnd(Animator animation) {
@@ -445,19 +452,20 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 					tv_channel3.getTranslationX(), 0);
 			ObjectAnimator Animator4 = ObjectAnimator.ofFloat(tv_channel4, "translationX",
 					tv_channel4.getTranslationX(), 0);
-			ObjectAnimator Animator5 = ObjectAnimator.ofFloat(tv_channel5, "translationX",
-					tv_channel5.getTranslationX(), 0);
-			ObjectAnimator Animator6 = ObjectAnimator.ofFloat(tv_channel6, "translationX",
-					tv_channel6.getTranslationX(), 0);
-			ObjectAnimator Animator7 = ObjectAnimator.ofFloat(tv_channel7, "translationX",
-					tv_channel7.getTranslationX(), 0);
-			ObjectAnimator Animator8 = ObjectAnimator.ofFloat(tv_channel8, "translationX",
-					tv_channel8.getTranslationX(), 0);
+			// ObjectAnimator Animator5 = ObjectAnimator.ofFloat(tv_channel5, "translationX",
+			// 		tv_channel5.getTranslationX(), 0);
+			// ObjectAnimator Animator6 = ObjectAnimator.ofFloat(tv_channel6, "translationX",
+			// 		tv_channel6.getTranslationX(), 0);
+			// ObjectAnimator Animator7 = ObjectAnimator.ofFloat(tv_channel7, "translationX",
+			// 		tv_channel7.getTranslationX(), 0);
+			// ObjectAnimator Animator8 = ObjectAnimator.ofFloat(tv_channel8, "translationX",
+			// 		tv_channel8.getTranslationX(), 0);
 			AnimatorSet animatorSet = new AnimatorSet();
 			animatorSet.setDuration(500);
 			animatorSet.setInterpolator(new OvershootInterpolator());
-			animatorSet.playTogether(Animator1, Animator2, Animator3, Animator4, Animator5, Animator6, Animator7,
-					Animator8);
+			animatorSet.playTogether(Animator1, Animator2, Animator3, Animator4);
+			// , Animator5, Animator6, Animator7,
+			// 		Animator8);
 			animatorSet.addListener(new AnimatorListenerAdapter() {
 				@Override
 				public void onAnimationEnd(Animator animation) {
@@ -530,7 +538,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		}
 			break;
 		case R.id.tv_mainsource: {
-			tv_selectsource.setText("主码流");
+			tv_selectsource.setText("mainsource");
 			hideSource();
 			if (FunStreamType.STREAM_MAIN != mFunVideoView.getStreamType()) {
 				mFunVideoView.setStreamType(FunStreamType.STREAM_MAIN);
@@ -539,7 +547,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		}
 			break;
 		case R.id.tv_subsource: {
-			tv_selectsource.setText("辅码流");
+			tv_selectsource.setText("subsource");
 			hideSource();
 			if (FunStreamType.STREAM_SECONDARY != mFunVideoView.getStreamType()) {
 				mFunVideoView.setStreamType(FunStreamType.STREAM_SECONDARY);
@@ -555,61 +563,61 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		}
 			break;
 		case R.id.tv_channel1: {
-			tv_selectchannel.setText("1通道");
+			tv_selectchannel.setText("ch1");
 			hideChannel();
 			mFunDevice.CurrChannel = 0;
 			playRealMedia();
 		}
 			break;
 		case R.id.tv_channel2: {
-			tv_selectchannel.setText("2通道");
+			tv_selectchannel.setText("ch2");
 			hideChannel();
 			mFunDevice.CurrChannel = 1;
 			playRealMedia();
 		}
 			break;
 		case R.id.tv_channel3: {
-			tv_selectchannel.setText("3通道");
+			tv_selectchannel.setText("ch3");
 			hideChannel();
 			mFunDevice.CurrChannel = 2;
 			playRealMedia();
 		}
 			break;
 		case R.id.tv_channel4: {
-			tv_selectchannel.setText("4通道");
+			tv_selectchannel.setText("ch4");
 			hideChannel();
 			mFunDevice.CurrChannel = 3;
 			playRealMedia();
 		}
 			break;
-		case R.id.tv_channel5: {
-			tv_selectchannel.setText("5通道");
-			hideChannel();
-			mFunDevice.CurrChannel = 4;
-			playRealMedia();
-		}
-			break;
-		case R.id.tv_channel6: {
-			tv_selectchannel.setText("6通道");
-			hideChannel();
-			mFunDevice.CurrChannel = 5;
-			playRealMedia();
-		}
-			break;
-		case R.id.tv_channel7: {
-			tv_selectchannel.setText("7通道");
-			hideChannel();
-			mFunDevice.CurrChannel = 6;
-			playRealMedia();
-		}
-			break;
-		case R.id.tv_channel8: {
-			tv_selectchannel.setText("8通道");
-			hideChannel();
-			mFunDevice.CurrChannel = 7;
-			playRealMedia();
-		}
-			break;
+		// case R.id.tv_channel5: {
+		// 	tv_selectchannel.setText("5通道");
+		// 	hideChannel();
+		// 	mFunDevice.CurrChannel = 4;
+		// 	playRealMedia();
+		// }
+		// 	break;
+		// case R.id.tv_channel6: {
+		// 	tv_selectchannel.setText("6通道");
+		// 	hideChannel();
+		// 	mFunDevice.CurrChannel = 5;
+		// 	playRealMedia();
+		// }
+		// 	break;
+		// case R.id.tv_channel7: {
+		// 	tv_selectchannel.setText("7通道");
+		// 	hideChannel();
+		// 	mFunDevice.CurrChannel = 6;
+		// 	playRealMedia();
+		// }
+		// 	break;
+		// case R.id.tv_channel8: {
+		// 	tv_selectchannel.setText("8通道");
+		// 	hideChannel();
+		// 	mFunDevice.CurrChannel = 7;
+		// 	playRealMedia();
+		// }
+		// 	break;
 		case R.id.ib_playstop: {
 			if (isPlaying) {
 				setPlaystop(false);
@@ -670,6 +678,16 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 			System.err.println("deviceidddd = " + mFunDevice.getId());
 			//intent.putExtra("deviceid", mFunDevice.getId());
 			//startActivity(intent);
+			Bundle bundle = new Bundle();
+			bundle.putInt("playtype",1);
+			bundle.putInt("deviceid", mFunDevice.getId());
+			mulscreenplayfragment = new MulscreenPlayFragment();
+			mulscreenplayfragment.setArguments(bundle);
+			fgm = getFragmentManager();
+			fgt = fgm.beginTransaction();
+			fgt.replace(R.id.fragment_video, mulscreenplayfragment);
+			fgt.addToBackStack(null);
+			fgt.commit();
 		}
 			break;
 		case R.id.ib_warn: {
@@ -702,9 +720,16 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 			String savepath = localpath + "WarnInfo" + File.separator + mFunDevice.getDevIP() + "-" + mFunDevice.CurrChannel + File.separator;
 			String savename = warnInfotime[0] + ".jpg";
 			File dirfile = new File(savepath);
-			if(!dirfile.exists())
-				dirfile.mkdirs();
+			if(!dirfile.exists()){
+				if(dirfile.mkdirs()){
+					Log.d(LOG_TAG,savepath);
+				}else{
+					Log.d(LOG_TAG,"mkdirs failed");
+				}
+			}
+	
 			final String path = mFunVideoView.captureImage(savepath+savename);
+			Log.d(LOG_TAG, path);
 			//final String path = captureImage(savepath, savename);
 			if (!TextUtils.isEmpty(path)) {
 				Message message = new Message();
@@ -761,7 +786,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 			Utils.showToast(context, R.string.media_capture_failure_need_playing);
 			return;
 		}
-		
+	
 		localCapturetime = Utils.getFilenameAndCurrenttime();
 		String savepath = localpath + "LocalCapture" + File.separator + mFunDevice.getDevIP() + "-" + mFunDevice.CurrChannel + File.separator;
 		String savename = localCapturetime[0] + ".jpg";
@@ -805,9 +830,11 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 				String path = (String) msg.obj;
 				String ThumbSavePath = localpath + "WarnInfo" + File.separator + mFunDevice.getDevIP() + "-" + mFunDevice.CurrChannel + File.separator;
 				String ThumbSaveName = warnInfotime[0] + ".thumb";
+				//Log.d(LOG_TAG, ThumbSavePath);
 				if(Utils.getImageThumbAndSave(path, 500, 500, ThumbSavePath, ThumbSaveName)){
 					warnInfo.setSavepath(path);
-					warnInfo.setThumbpath(ThumbSavePath+ThumbSaveName);					
+					warnInfo.setThumbpath(ThumbSavePath+ThumbSaveName);
+					Log.d(LOG_TAG, ThumbSaveName);					
 				}
 				else {
 					Utils.showToast(context, "保存截图失败");

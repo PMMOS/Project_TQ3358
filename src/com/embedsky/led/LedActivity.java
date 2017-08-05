@@ -274,13 +274,16 @@ public class LedActivity extends Activity {
         //video initial
         FunSupport.getInstance().init(context);
         SharedPreferences sharedPreferences = getSharedPreferences(SPNames.UserInfo.getValue(), Context.MODE_PRIVATE);
-        if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+        File f = new File("root"+File.separator+"mnt");
+        if(!f.exists()){
+        //if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
         	Utils.showToast(context,"no SD card");
         	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), false).commit();
         }else{
         	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), true).commit();
         	sharedPreferences.edit().putString(UserInfoItems.localPath.getValue(), 
-        		Environment.getExternalStorageDirectory().toString()+File.separator+"xmlocal"+File.separator).commit();
+        		"root"+File.separator+"mnt"+File.separator+"xmlocal"+File.separator).commit();
+        		//Environment.getExternalStorageDirectory().toString()+File.separator+"xmlocal"+File.separator).commit();
         }
         if(findViewById(R.id.fragment_video) != null){
         	if(savedInstanceState != null){
