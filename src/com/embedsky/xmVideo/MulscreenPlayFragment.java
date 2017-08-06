@@ -5,6 +5,8 @@ import java.util.List;
 
 import com.embedsky.led.R;
 
+import com.interfaces.mLocalCaptureCallBack;
+
 import com.Utils.Utils;
 import com.adapters.PreviewsGridViewAdapter;
 import com.interfaces.mCallBackOutAdapter;
@@ -31,7 +33,7 @@ import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-public class MulscreenPlayFragment extends Fragment {
+public class MulscreenPlayFragment extends Fragment implements mLocalCaptureCallBack {
 
 	//private TextView tv_title;
 	private GridView gv_screens;
@@ -87,6 +89,11 @@ public class MulscreenPlayFragment extends Fragment {
 				onDestroy();
 				break;
 		}
+	}
+
+	@Override
+	public void setCapturePath(int warnStatus){
+
 	}
 
 	private class gvpostRunnable implements Runnable {

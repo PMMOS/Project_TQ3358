@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.interfaces.mLocalCaptureCallBack;
 import com.embedsky.led.R;
 import com.lib.funsdk.support.FunSupport;
 import com.lib.funsdk.support.models.FunDevType;
@@ -25,7 +26,7 @@ import com.Utils.Utils;
 
 import java.util.List;
 
-public class DeviceLoginFragment extends Fragment{
+public class DeviceLoginFragment extends Fragment implements mLocalCaptureCallBack{
 
 	private static final String LOG_TAG = "devlogin";
 
@@ -88,6 +89,12 @@ public class DeviceLoginFragment extends Fragment{
 
 	}
 
+	@Override
+	public void setCapturePath(int warnStatus){
+		
+	}
+
+
 	private Handler mTaskHandler = new Handler(){
 		@Override
 		public void handleMessage(Message msg){
@@ -103,7 +110,7 @@ public class DeviceLoginFragment extends Fragment{
 					onscreenplayfragment.setArguments(bundle);
 					fgm = getFragmentManager();
 					fgt = fgm.beginTransaction();
-					fgt.replace(R.id.fragment_video, onscreenplayfragment);
+					fgt.replace(R.id.fragment_video, onscreenplayfragment, "onescreen");
 					fgt.addToBackStack(null);
 					fgt.commit();
 				}

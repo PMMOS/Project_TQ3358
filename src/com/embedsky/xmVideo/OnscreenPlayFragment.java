@@ -11,6 +11,8 @@ import com.Utils.SharedPreferencesNames.SPNames;
 import com.Utils.SharedPreferencesNames.UserInfoItems;
 import com.Utils.Utils;
 import com.interfaces.mFunVideoViewOnTouchCallBack;
+import com.interfaces.mLocalCaptureCallBack;
+import com.interfaces.mPictureCallBack;
 import com.items.LocalCapture;
 import com.items.LocalRecord;
 import com.items.WarnInfo;
@@ -29,6 +31,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
@@ -66,7 +69,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class OnscreenPlayFragment extends Fragment implements OnClickListener, OnErrorListener,
-		OnInfoListener, mFunVideoViewOnTouchCallBack, OnCompletionListener {
+		OnInfoListener, mFunVideoViewOnTouchCallBack, OnCompletionListener, mLocalCaptureCallBack {
 
 	private static final String LOG_TAG = "onescreen";
 
@@ -76,6 +79,11 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	private final int MESSAGE_TOAST_SCREENSHOT_SAVE = 0x104;
 	private final int MESSAGE_OPEN_VOICE = 0x105;
 	private final int MESSAGE_HIDE_CONTROL = 0x106;
+	private final int MESSAGE_MCALLBACK_WARNSTART = 0x107;
+	private final int MESSAGE_MCALLBACK_WARN = 0x108;
+	private final int MESSAGE_MCALLBACK_WARNEND = 0x109;
+
+	private mPictureCallBack mpictureupload;
 
 	private int type;
 	private FunVideoView mFunVideoView;
@@ -104,13 +112,14 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 	private boolean isChannelShowing = false, isSourceShowing = false, isControlShowing = false;
 	private boolean isChannelAnimating = false, isSourceAnimating = false;
 	private boolean isPlaying = false, hasES;
-	private int warnstatus = 0;
+	public int warnstatus = 0;
 	private String localpath;
 	private LocalCapture localCapture;
 	private LocalRecord localRecord;
-	private WarnInfo warnInfo;
+	private WarnInfo[] warnInfo = new WarnInfo[4];
 	private String[] localRecordtime, localCapturetime, warnInfotime;
 
+	private int channel = 0;
 	private FragmentManager fgm;
 	private FragmentTransaction fgt;
 	private MulscreenPlayFragment mulscreenplayfragment;
@@ -127,6 +136,16 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 				hasES = false;
 		}
 		Log.d(LOG_TAG, "Onescreen play onCreate");
+	}
+
+	@Override 
+	public void onAttach(Activity activity){
+		try{
+			mpictureupload = (mPictureCallBack) activity;
+		} catch (ClassCastException e){
+			throw new ClassCastException(activity.toString()+"must implements mPictureCallBack");
+		}
+		super.onAttach(activity);
 	}
 
 	@Override
@@ -699,6 +718,29 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		}
 	}
 
+	@Override
+	public void setCapturePath(int warnStatus){
+		mFunDevice.CurrChannel = 0;
+		channel = 0;
+		playRealMedia();
+		warnstatus = warnStatus;
+		Message message = new Message();
+		message.what = MESSAGE_MCALLBACK_WARN;
+		message.obj = warnStatus;
+		mcallbackhandler.sendMessageDelayed(message,300);
+
+		//tryToCapture();
+	}
+
+	 private void tryToWarn(int chan, int warnStatus){
+	 	mFunDevice.CurrChannel = chan;
+	 	playRealMedia();
+	 	warnstatus = warnStatus;
+	 	Message message = new Message();
+		message.what = MESSAGE_MCALLBACK_WARN;
+	 	mcallbackhandler.sendMessageDelayed(message,300);
+	 }
+
 	private void tryToWarn(){
 		//截图，并保存信息，在报警界面读取信息，展示截图，播放云端录像
 		if (!mFunVideoView.isPlaying()) {
@@ -710,11 +752,11 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 			layout_warning.setVisibility(View.VISIBLE);
 			warnstatus = 1;
 			warnInfotime = Utils.getFilenameAndCurrenttime();
-			warnInfo = new WarnInfo();
-			warnInfo.setStarttime(warnInfotime[1]);
-			warnInfo.setDeviceid(mFunDevice.getId());
-			warnInfo.setChannel(mFunDevice.CurrChannel);
-			warnInfo.setDevicename(mFunDevice.devIp + ":" + mFunDevice.tcpPort + "/" + mFunDevice.CurrChannel);
+			warnInfo[mFunDevice.CurrChannel] = new WarnInfo();
+			warnInfo[mFunDevice.CurrChannel].setStarttime(warnInfotime[1]);
+			warnInfo[mFunDevice.CurrChannel].setDeviceid(mFunDevice.getId());
+			warnInfo[mFunDevice.CurrChannel].setChannel(mFunDevice.CurrChannel);
+			warnInfo[mFunDevice.CurrChannel].setDevicename(mFunDevice.devIp + ":" + mFunDevice.tcpPort + "/" + mFunDevice.CurrChannel);
 			//截图
 			warnInfotime = Utils.getFilenameAndCurrenttime();
 			String savepath = localpath + "WarnInfo" + File.separator + mFunDevice.getDevIP() + "-" + mFunDevice.CurrChannel + File.separator;
@@ -729,9 +771,9 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 			}
 	
 			final String path = mFunVideoView.captureImage(savepath+savename);
-			Log.d(LOG_TAG, path);
 			//final String path = captureImage(savepath, savename);
 			if (!TextUtils.isEmpty(path)) {
+				Log.d(LOG_TAG, path);
 				Message message = new Message();
 				message.what = MESSAGE_TOAST_SCREENSHOT_SAVE;
 				message.obj = path;
@@ -740,9 +782,10 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		}else if(warnstatus == 2) {
 			Utils.showToast(context, "报警结束");
 			layout_warning.setVisibility(View.INVISIBLE);
-			warnInfo.setEndtime(Utils.getCurrenttime());
-			Utils.saveWarnHistory(warnInfo, context);
-			warnstatus = 0;
+			Message msg = new Message();
+			msg.what = MESSAGE_MCALLBACK_WARNEND;
+			mHandler.sendMessageDelayed(msg, 50);
+			//warnstatus = 0;
 		}
 	}
 
@@ -808,6 +851,18 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 		}
 	}
 
+	private Handler mcallbackhandler = new Handler(){
+		@Override
+		public void handleMessage(Message msg){
+			switch (msg.what){
+				case MESSAGE_MCALLBACK_WARN: tryToWarn();
+				break;
+				default:
+				break;
+			}
+		}
+	};
+
 	private Handler mHandler = new Handler() {
 
 		@Override
@@ -830,16 +885,39 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 				String path = (String) msg.obj;
 				String ThumbSavePath = localpath + "WarnInfo" + File.separator + mFunDevice.getDevIP() + "-" + mFunDevice.CurrChannel + File.separator;
 				String ThumbSaveName = warnInfotime[0] + ".thumb";
-				//Log.d(LOG_TAG, ThumbSavePath);
-				if(Utils.getImageThumbAndSave(path, 500, 500, ThumbSavePath, ThumbSaveName)){
-					warnInfo.setSavepath(path);
-					warnInfo.setThumbpath(ThumbSavePath+ThumbSaveName);
-					Log.d(LOG_TAG, ThumbSaveName);					
+				//toastScreenShotPreview(path);
+				if(Utils.getImageThumbAndSave(path, 400, 400, ThumbSavePath, ThumbSaveName)){
+					warnInfo[mFunDevice.CurrChannel].setSavepath(path);
+					warnInfo[mFunDevice.CurrChannel].setThumbpath(ThumbSavePath+ThumbSaveName);
+					channel += 1;
+					Log.d(LOG_TAG, "save success");
+					mpictureupload.uploadPicture(path);
+					if(channel < 3){
+						tryToWarn(channel, 0);
+					}else{
+						channel = 0;
+					}					
 				}
 				else {
 					Utils.showToast(context, "保存截图失败");
+					if(channel < 3){
+					 	tryToWarn(channel, 0);
+					 }else{
+					  	channel = 0;
+					 }		
 				}
-				warnstatus = 2;
+				//warnstatus = 2;
+			}
+				break;
+			case MESSAGE_MCALLBACK_WARNEND: {
+				warnInfo[mFunDevice.CurrChannel].setEndtime(Utils.getCurrenttime());
+			    Utils.saveWarnHistory(warnInfo[mFunDevice.CurrChannel], context);
+			    channel += 1;
+			    if(channel < 3){
+					tryToWarn(channel, 2);
+				}else{
+					channel = 0;
+				}			
 			}
 				break;
 			case MESSAGE_OPEN_VOICE: {

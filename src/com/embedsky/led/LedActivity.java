@@ -5,7 +5,11 @@ import com.embedsky.httpUtils.lockStruct;
 import com.embedsky.httpUtils.logInfo;
 import com.embedsky.httpUtils.tirePressure;
 
+import com.interfaces.mLocalCaptureCallBack;
+import com.interfaces.mPictureCallBack;
+
 import com.embedsky.xmVideo.DeviceLoginFragment;
+import com.embedsky.xmVideo.OnscreenPlayFragment;
 
 import com.lib.funsdk.support.FunSupport;
 
@@ -15,6 +19,10 @@ import com.Utils.SharedPreferencesNames.UserInfoItems;
 import com.Utils.Utils;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,8 +33,12 @@ import java.util.TimerTask;
 import org.json.JSONObject;
 import org.json.JSONException;
 
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
+
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.Service;
@@ -61,7 +73,7 @@ import android.widget.TextView;
 
 import com.igexin.sdk.PushManager;
 
-public class LedActivity extends Activity {
+public class LedActivity extends Activity implements mPictureCallBack{
 	/** Called when the activity is first created. */
 
 	//加载libled.so库，必须放在最前面
@@ -107,6 +119,7 @@ public class LedActivity extends Activity {
 	private static int disCnt;
 
 	//video
+	private mLocalCaptureCallBack mlocalcapture;
 	private Context context;
 	private FunDeviceUtils fdu;
 	private FragmentManager fgm;
@@ -300,7 +313,40 @@ public class LedActivity extends Activity {
 		
 		timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
 	}
+
+	@Override
+	public void onAttachFragment(Fragment fragment){
+		try{
+			mlocalcapture = (mLocalCaptureCallBack) fragment;
+		} catch (ClassCastException e){
+			throw new ClassCastException(fragment.toString()+"must implements mLocalCaptureCallBack");
+		}
+		super.onAttachFragment(fragment);
+	}
 	
+	@Override
+	public void uploadPicture(String path){
+		File pic = new File(path);
+		if(pic.exists()){
+			try{
+				FileInputStream inputfile = new FileInputStream(path);
+				FileOutputStream outputfile = new FileOutputStream(path+".b64");
+				BASE64Encoder base64 = new BASE64Encoder();
+				try{
+					base64.encode(inputfile, outputfile);
+					Log.d(LOG_TAG,"encode success");
+				}catch(IOException e){
+					Log.e(LOG_TAG,"encode failed");
+				}
+			}catch(FileNotFoundException e){
+				//throw new FileNotFoundException("file not found");\
+				Log.e(LOG_TAG,"file not found");
+			}	
+		}else{
+			Log.d(LOG_TAG,"PIC not existed");
+		}
+	}
+
 	Timer timer = new Timer();
 	TimerTask task = new TimerTask() {
 		@Override
@@ -559,14 +605,21 @@ public class LedActivity extends Activity {
 		@Override
 		public void onClick(View v) {
 			//遍历数组，判断是哪个led控件被选中
-			for (int i = 0; i < 2; i++) {
-				if (v == cb[i]) {
-					//根据选中/取消状态来控制lock的开/关
-					//controlLed(i + 1, cb[i].isChecked());
-					return;
+			
+			if (v == cb[0]) {
+				//根据选中/取消状态来控制lock的开/关
+				//controlLed(i + 1, cb[i].isChecked());
+				if(cb[0].isChecked()){
+					mlocalcapture.setCapturePath(0);
+				}
+				
+			}else if(v == cb[1]){
+				if(cb[1].isChecked()){
+					mlocalcapture.setCapturePath(2);
 				}
 			}
-
+			
+			return;
 		}
 	}
 
