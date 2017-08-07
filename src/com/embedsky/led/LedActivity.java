@@ -3,6 +3,7 @@ package com.embedsky.led;
 import com.embedsky.httpUtils.httpUtils;
 import com.embedsky.httpUtils.lockStruct;
 import com.embedsky.httpUtils.logInfo;
+import com.embedsky.httpUtils.picUpload;
 import com.embedsky.httpUtils.tirePressure;
 
 import com.interfaces.mLocalCaptureCallBack;
@@ -18,11 +19,14 @@ import com.Utils.SharedPreferencesNames.SPNames;
 import com.Utils.SharedPreferencesNames.UserInfoItems;
 import com.Utils.Utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +99,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private String url="http://120.76.219.196:85/trucklogs/add_log";
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
 	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
+	private String picurl = "http://120.76.219.196:87/file/upload";
 	private static HashMap<String, String> params = new HashMap<String, String>();
 	private static HashMap<String, String> cidparams = new HashMap<String, String>();
 	private static lockStruct[] lockstruct = new lockStruct[5];
@@ -333,8 +338,31 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				FileOutputStream outputfile = new FileOutputStream(path+".b64");
 				BASE64Encoder base64 = new BASE64Encoder();
 				try{
-					base64.encode(inputfile, outputfile);
+					byte[] buf = new byte[inputfile.available()];
+					inputfile.read(buf);
+					inputfile.close();
+					String picdata = base64.encode(buf);
 					Log.d(LOG_TAG,"encode success");
+					Log.d(LOG_TAG, String.valueOf(picdata.length()));
+					picUpload picupload = new picUpload(picdata, "jpg");
+					Writer os = new OutputStreamWriter(outputfile);
+					os.write(picdata);
+					os.flush();
+					os.close();
+					httpUtils.doPostAsyn(picurl, picupload.picUploadGet(), new httpUtils.HttpCallBackListener() {
+	            		@Override
+	            		public void onFinish(String result) {
+	                		Message message = new Message();
+	                		message.obj=result;
+	                		handler.sendMessage(message);
+	            		}
+
+	            		@Override
+	            		public void onError(Exception e) {
+	            		}
+
+	        		});
+
 				}catch(IOException e){
 					Log.e(LOG_TAG,"encode failed");
 				}
