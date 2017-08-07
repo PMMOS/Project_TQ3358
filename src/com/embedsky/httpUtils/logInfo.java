@@ -6,15 +6,24 @@ import org.json.JSONObject;
 import org.json.JSONException;
 
 public class logInfo{
-	private JSONObject lock_val;
-	private tirePressure[] tire_val;
-	private String type;
+	//heartpackages
 	private String gpsx;
 	private String gpsy;
 	private String speed;
-	private String fuelvol;
-	private String haswarn;
 	private String distance;
+	private String haswarn;
+	//leakage
+	//oil stolen
+	//
+	//lock exception
+	private JSONObject lock_val;
+	private tirePressure[] tire_val;
+	private String type;
+	
+	
+	private String fuelvol;
+	
+	
 	
 	public logInfo(){
 		super();
@@ -87,7 +96,7 @@ public class logInfo{
 		log_val.put("speed",speed);
 		log_val.put("gpsx",gpsx);
 		log_val.put("gpsy",gpsy);
-		log_val.put("mile",distance);
+		log_val.put("distance",distance);
 		log_val.put("time",String.valueOf(System.currentTimeMillis()));
 
 		// } catch (JSONException e1){

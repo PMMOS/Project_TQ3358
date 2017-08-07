@@ -7,23 +7,48 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
+import java.net.URLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import android.util.Log;
 
 
 public class httpUtils {
+    private static final String LOG_TAG = "Http";
 	
-	//require time
-	private static final int TIMEOUT_IN_MILLIONS = 5000;
-	
-	//token
-	public static final String HTTP_HEADER_PARAM = "token";
-	
+	private static final int CONNECT_TIMEOUT = 2*1000;  
+    private static final int READ_TIMEOUT = 5*1000;
+        
+    private static String encoderUTF(String in)
+    {
+        try {
+            return URLEncoder.encode(in, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    private static String Map2param(Map<String, String> params) throws UnsupportedEncodingException
+    {
+        StringBuilder param = new StringBuilder();
+        Iterator<Entry<String, String>> iterator = params.entrySet().iterator();
+        while(iterator.hasNext())
+        {
+            Entry<String, String> entry = iterator.next();
+            param.append(encoderUTF(entry.getKey())+"="+encoderUTF(entry.getValue())+"&");
+        }
+        param.deleteCharAt(param.length()-1);
+        return param.toString();
+    }
+    
 	//callback
 	public interface HttpCallBackListener{
 		//success
@@ -85,74 +110,57 @@ public class httpUtils {
     /**
      * Get请求，获得返回数据
      *
-     * @param urlStr
+     * @param url
      * @return
      * @throws Exception
      */
-    public static String doGet(String urlStr,HashMap<String,String> params) {
-        URL url = null;
-        HttpURLConnection conn = null;
-        InputStream is = null;
-        ByteArrayOutputStream baos = null;
+    public static String doGet(String url,HashMap<String,String> params) throws UnsupportedEncodingException {
+        String result = "";
+        BufferedReader in = null;
         try {
-            StringBuilder sb = null;
-            if (params != null) {
-                //将HashMap<String,String> params转化成name1=value1&name2=value2 的形式
-                sb = toRequestString(params);
-                }
-            // 将url整合成携带参数的url：http://192.168.1.35:8080/MyWeb/MyServlet?name=changj&age=10
-            url = new URL(String.format(urlStr+"?%s",sb));
-            // 打开和URL之间的连接
-            conn = (HttpURLConnection) url.openConnection();
-            //设置读取超时、连接超时
-            conn.setReadTimeout(TIMEOUT_IN_MILLIONS);
-            conn.setConnectTimeout(TIMEOUT_IN_MILLIONS);
-            //设置请求方式
-            conn.setRequestMethod("GET");
-            // 设置通用的请求属性
-            conn.setRequestProperty("accept", "*/*");
-            conn.setRequestProperty("connection", "Keep-Alive");
-            conn.setRequestProperty("content-Type","application/json;charset=UTF-8");
-            conn.setRequestProperty(HTTP_HEADER_PARAM,"1234");
-            if (conn.getResponseCode() == 200) {
-                //读取服务器返回的数据流
-                is = conn.getInputStream();
-                baos = new ByteArrayOutputStream();
-                int len ;
-                byte[] buf = new byte[128];
-                while ((len = is.read(buf)) != -1) {
-                    baos.write(buf, 0, len);
-                }
-                baos.flush();
-                return URLDecoder.decode(baos.toString(), "UTF-8");
-            } else {
-                throw new RuntimeException(" responseCode is not 200 ... ");
+            String urlNameString = url + "?" + Map2param(params);
+            URL realUrl = new URL(urlNameString);
+            URLConnection connection = realUrl.openConnection();
+            connection.setRequestProperty("accept", "*/*");
+            connection.setRequestProperty("connection", "No-Alive");
+            connection.setConnectTimeout(CONNECT_TIMEOUT);
+            connection.setReadTimeout(READ_TIMEOUT);
+//            connection.setRequestProperty("user-agent",
+//                    "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1)");
+            connection.connect();
+            Map<String, List<String>> map = connection.getHeaderFields();
+            for (String key : map.keySet()) {
+                System.out.println(key + ": " + map.get(key));
             }
-
+            in = new BufferedReader(new InputStreamReader(
+                    connection.getInputStream()));
+            String line;
+            while ((line = in.readLine()) != null) {
+                result += line;
+                result += "\r\n";
+            }
         } catch (Exception e) {
+            System.out.println("Error in Get" + e);
             e.printStackTrace();
-        } finally {
-            try {
-                if (is != null)
-                    is.close();
-            } catch (IOException e) {
-            }
-            try {
-                if (baos != null)
-                    baos.close();
-            } catch (IOException e) {
-            }
-            conn.disconnect();
         }
-
-        return null ;
+        finally {
+            try {
+                if (in != null) {
+                    in.close();
+                }
+            } catch (Exception e2) {
+                e2.printStackTrace();
+            }
+        }
+        //return URLDecoder.decode(result, "UTF-8");
+        return result;
 
     }
     
     /**
      * 向指定 URL 发送POST方法的请求
      *
-     * @param urlStr
+     * @param url
      *            发送请求的 URL
      * @param params
      *            请求参数，请求参数应该是 name1=value1&name2=value2 的形式。
@@ -160,90 +168,54 @@ public class httpUtils {
      * @throws UnsupportedEncodingException 
      * @throws Exception
      */
-    public static String doPost(String urlStr, HashMap<String,String> params) throws UnsupportedEncodingException {
+    public static String doPost(String url, HashMap<String,String> params) throws UnsupportedEncodingException {
         PrintWriter out = null;
         BufferedReader in = null;
         String result = "";
         try {
-            URL url = new URL(urlStr);
-            // 打开和URL之间的连接
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            //设置请求方式
-            conn.setRequestMethod("POST");
-            //设置读取超时、连接超时
-            conn.setReadTimeout(TIMEOUT_IN_MILLIONS);
-            conn.setConnectTimeout(TIMEOUT_IN_MILLIONS);
-            // 设置通用的请求属性
+            URL realUrl = new URL(url);
+            System.out.println(url);
+            URLConnection conn = realUrl.openConnection();
             conn.setRequestProperty("accept", "*/*");
             conn.setRequestProperty("connection", "Keep-Alive");
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            conn.setRequestProperty("charset", "utf-8");
-            conn.setRequestProperty(HTTP_HEADER_PARAM,"1234");
-            conn.setUseCaches(false);
-            // 发送POST请求必须设置如下两行
+            conn.setConnectTimeout(CONNECT_TIMEOUT);
+            conn.setReadTimeout(READ_TIMEOUT);
+//            conn.setRequestProperty("user-agent",
+//                    "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1)");
             conn.setDoOutput(true);
             conn.setDoInput(true);
-
-            if (params != null) {
-                //将HashMap<String,String> params转化成name1=value1&name2=value2 的形式
-                StringBuilder sb = toRequestString(params);
-                // 获取URLConnection对象对应的输出流
-                out = new PrintWriter(conn.getOutputStream());
-                // 发送请求参数
-                out.print(sb);
-                // flush输出流的缓冲
-                out.flush();
-              }
-            // 定义BufferedReader输入流来读取URL的响应
-            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK){
-            	in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                String line;
-                while ((line = in.readLine()) != null) {
-                    result += line;
-                  }
-            }else {
-                throw new RuntimeException(" responseCode is not 200 ... ");
+            out = new PrintWriter(conn.getOutputStream());
+            out.print(Map2param(params));
+            out.flush();
+            Map<String, List<String>> map = conn.getHeaderFields();
+            for (String key : map.keySet()) {
+                System.out.println(key + ": " + map.get(key));
             }
-         } catch (Exception e) {
+            in = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream()));
+            String line;
+            while ((line = in.readLine()) != null) {
+                result += line;
+                result += "\r\n";
+            }
+        } catch (Exception e) {
+            System.out.println("Error in Post"+e);
             e.printStackTrace();
-          }
-        // 使用finally块来关闭输出流、输入流
-        finally {
-            try {
-                if (out != null) {
+        }
+        finally{
+            try{
+                if(out!=null){
                     out.close();
                 }
-                if (in != null) {
+                if(in!=null){
                     in.close();
                 }
-            } catch (IOException ex) {
+            }
+            catch(IOException ex){
                 ex.printStackTrace();
             }
         }
-        
-		return URLDecoder.decode(result, "UTF-8");
-		
-    }
-    
-    /**
-     * 将map类型转换成name1=value1&name2=value2 的形式
-     * @param map
-     * @return
-     */
-    private static StringBuilder toRequestString(HashMap<String,String> map){
-        StringBuilder sb = new StringBuilder();
-        Iterator<Entry<String, String>> it = map.entrySet().iterator();
-        while(it.hasNext()){
-            Map.Entry<String,String> entry = (Map.Entry<String,String>)it.next();
-            Object key = entry.getKey();
-            Object val = entry.getValue();
-            sb.append(key);
-            sb.append("=");
-            sb.append(val);
-            sb.append("&");
-        }
-        //sb.deleteCharAt(sb.length()-1);
-        return sb;
+        return URLDecoder.decode(result, "UTF-8");
     }
 
 }

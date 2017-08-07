@@ -87,6 +87,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
 
 	private static final String LOG_TAG = "lock";
 
+	//handler msg.what
+	private final int MESSAGE_GETUI = 0x100;
+	private final int MESSAGE_HEARTPACKAGE = 0x101;
+	private final int MESSAGE_FILEUPLOAD = 0x102;
+
 	//初始化led
 	public static native boolean ledInit();
 	//关闭led
@@ -99,7 +104,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private String url="http://120.76.219.196:85/trucklogs/add_log";
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
 	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
-	private String picurl = "http://120.76.219.196:87/file/upload";
+	private String picurl = "http://120.76.219.196:80/file/upload";
 	private static HashMap<String, String> params = new HashMap<String, String>();
 	private static HashMap<String, String> cidparams = new HashMap<String, String>();
 	private static lockStruct[] lockstruct = new lockStruct[5];
@@ -225,6 +230,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	            @Override
 	            public void onFinish(String result) {
 	                Message message = new Message();
+	                message.what = MESSAGE_GETUI;
 	                message.obj=result;
 	                handler.sendMessage(message);
 	            }
@@ -344,7 +350,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					String picdata = base64.encode(buf);
 					Log.d(LOG_TAG,"encode success");
 					Log.d(LOG_TAG, String.valueOf(picdata.length()));
-					picUpload picupload = new picUpload(picdata, "jpg");
+					picUpload picupload = new picUpload(picdata, "png");
 					Writer os = new OutputStreamWriter(outputfile);
 					os.write(picdata);
 					os.flush();
@@ -353,6 +359,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	            		@Override
 	            		public void onFinish(String result) {
 	                		Message message = new Message();
+	                		message.what = MESSAGE_FILEUPLOAD;
 	                		message.obj=result;
 	                		handler.sendMessage(message);
 	            		}
@@ -416,7 +423,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
                     @Override
                     public void onFinish(String result) {
                    	Message message = new Message();
-                    	message.obj=result;
+                   		message.what = MESSAGE_HEARTPACKAGE;
+                    	message.obj = result;
                     	handler.sendMessage(message);
           
                     }
@@ -471,22 +479,45 @@ public class LedActivity extends Activity implements mPictureCallBack{
     	}
     }		
 	
+	//http handler
 	Handler handler = new Handler(){
 		@Override
     	public void handleMessage(Message msg) {
-			String s =(String) msg.obj;
+    		switch(msg.what){
+    			case MESSAGE_HEARTPACKAGE:{
+    				String s =(String) msg.obj;
 	        		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
-			//System.out.println(s);
-			Log.d(LOG_TAG, s);
-			if(s != null){				
-				tx[5].setText(s+String.valueOf(cnt));	
-				cnt += 1;
-				//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
-				for (int i = 0; i < 5; i++){
-					lockstatustemp[i] = lockstruct[i].getlockStatus();
-				}
-				flag = false;
-			} 
+					//System.out.println(s);
+					Log.d(LOG_TAG, s);
+					if(s != null){				
+						tx[5].setText(s+String.valueOf(cnt));	
+						cnt += 1;
+						//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
+						for (int i = 0; i < 5; i++){
+							lockstatustemp[i] = lockstruct[i].getlockStatus();
+						}
+						flag = false;
+					} 
+    			}break;
+    			case MESSAGE_FILEUPLOAD:{
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, s);
+    				try{
+    					JSONObject js = new JSONObject(s);
+    					JSONObject cont = js.getJSONObject("content");
+    					int picsid = cont.getInt("sid");
+    					Log.d(LOG_TAG, String.valueOf(picsid));
+    				}catch(JSONException e){
+    					e.printStackTrace();
+    				}	
+    				
+    			}break;
+    			case MESSAGE_GETUI:{
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, s);
+    			}break;
+    			default: break;
+    		}
     	}
 	};
 

@@ -886,12 +886,12 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 				String ThumbSavePath = localpath + "WarnInfo" + File.separator + mFunDevice.getDevIP() + "-" + mFunDevice.CurrChannel + File.separator;
 				String ThumbSaveName = warnInfotime[0] + ".thumb";
 				//toastScreenShotPreview(path);
-				if(Utils.getImageThumbAndSave(path, 400, 400, ThumbSavePath, ThumbSaveName)){
+				if(Utils.getImageThumbAndSave(path, 500, 500, ThumbSavePath, ThumbSaveName)){
 					warnInfo[mFunDevice.CurrChannel].setSavepath(path);
 					warnInfo[mFunDevice.CurrChannel].setThumbpath(ThumbSavePath+ThumbSaveName);
 					channel += 1;
 					Log.d(LOG_TAG, "save success");
-					mpictureupload.uploadPicture(path);
+					mpictureupload.uploadPicture(ThumbSavePath+ThumbSaveName);
 					if(channel < 3){
 						tryToWarn(channel, 0);
 					}else{
