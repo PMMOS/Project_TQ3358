@@ -14,6 +14,10 @@ public class lockStruct {
 		this.lockName = lockName;
 		this.lockStatus = lockStatus;
 	}
+
+	public void setlockName(String lockName){
+		this.lockName = lockName;
+	}
 	
 	public void setlockStatus(String lockStatus){
 		this.lockStatus = lockStatus;

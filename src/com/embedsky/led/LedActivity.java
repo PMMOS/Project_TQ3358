@@ -9,6 +9,9 @@ import com.embedsky.httpUtils.tirePressure;
 import com.interfaces.mLocalCaptureCallBack;
 import com.interfaces.mPictureCallBack;
 
+import com.embedsky.serialport.SerialPort;
+import com.embedsky.serialport.SerialPortFinder;
+
 import com.embedsky.xmVideo.DeviceLoginFragment;
 import com.embedsky.xmVideo.OnscreenPlayFragment;
 
@@ -22,11 +25,12 @@ import com.Utils.Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.OutputStream;
+import java.security.InvalidParameterException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +41,8 @@ import java.util.TimerTask;
 import org.json.JSONObject;
 import org.json.JSONException;
 
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
+import Decoder.BASE64Decoder;
+import Decoder.BASE64Encoder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -136,6 +140,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private FragmentTransaction fgt;
 	private DeviceLoginFragment devlogfragment;
 	
+	//serials
+	protected SerialPort mSerialPort;
+	protected OutputStream mOutputStream;
+	private InputStream mInputStream;
+	private ReadThread mReadThread;
+
 
 	//CheckBox数组，用来存放2个led灯控件
 	CheckBox[] cb = new CheckBox[2];
@@ -180,17 +190,17 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			cb[i].setOnClickListener(myClickListern);
 		}
 		
-		lockstruct[0] = new lockStruct("up_front","on");
-		lockstruct[1] = new lockStruct("up_middle","on");
-		lockstruct[2] = new lockStruct("up_back","on");
-		lockstruct[3] = new lockStruct("down_left","on");
-		lockstruct[4] = new lockStruct("down_right","on");
+		lockstruct[0] = new lockStruct("up_front","0");
+		lockstruct[1] = new lockStruct("up_middle","0");
+		lockstruct[2] = new lockStruct("up_back","0");
+		lockstruct[3] = new lockStruct("down_left","0");
+		lockstruct[4] = new lockStruct("down_right","0");
 
 		tirepressure[0] = new tirePressure("lefttirepressure","0");
 		tirepressure[1] = new tirePressure("righttirepressure","0");
 		
 		for (int i = 0; i < 5; i++){
-			lockstatustemp[i] = "on";
+			lockstatustemp[i] = "0";
 		}
 		
 		// 退出按钮点击事件处理
@@ -221,7 +231,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("sid","11");
+			cidparams.put("trucknumber","123");
 			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
@@ -242,6 +252,25 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	        });
 		}
 
+		//serials initial
+		File fSerials = new File(File.separator+"dev"+File.separator+"ttySAC2");
+		if(fSerials.exists()){
+			try{
+				mSerialPort = new SerialPort(fSerials, 4800);
+				mOutputStream = mSerialPort.getOutputStream();
+				mInputStream = mSerialPort.getInputStream();
+			} catch (SecurityException e) {
+			
+			} catch (IOException e) {
+			
+			} catch (InvalidParameterException e) {
+			
+			}
+			
+		}else{
+			Log.e(LOG_TAG, "file not found");
+		}
+		
 		//gps initial
 		LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 		Criteria criteria = new Criteria();
@@ -288,12 +317,15 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		if (canhandler == null){
 			canhandler = new mycanHandler();
 		}
+
+		mReadThread = new ReadThread();
+		mReadThread.start();
 		
 		canCnt = 0;
 		disCnt = 0;
 		can_Rev canrev = new can_Rev();
-        	Thread rev = new Thread(canrev);
-        	rev.start();
+        Thread rev = new Thread(canrev);
+        rev.start();
 
         //video initial
         FunSupport.getInstance().init(context);
@@ -340,21 +372,25 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		File pic = new File(path);
 		if(pic.exists()){
 			try{
-				FileInputStream inputfile = new FileInputStream(path);
+				FileInputStream inputfile = new FileInputStream(pic);
 				FileOutputStream outputfile = new FileOutputStream(path+".b64");
-				BASE64Encoder base64 = new BASE64Encoder();
+				BASE64Encoder base64encoder = new BASE64Encoder();
+				BASE64Decoder base64decoder = new BASE64Decoder();
 				try{
 					byte[] buf = new byte[inputfile.available()];
+					Log.d(LOG_TAG, String.valueOf(inputfile.available()));
 					inputfile.read(buf);
 					inputfile.close();
-					String picdata = base64.encode(buf);
+					String picdata = base64encoder.encode(buf);
 					Log.d(LOG_TAG,"encode success");
 					Log.d(LOG_TAG, String.valueOf(picdata.length()));
 					picUpload picupload = new picUpload(picdata, "png");
-					Writer os = new OutputStreamWriter(outputfile);
-					os.write(picdata);
-					os.flush();
-					os.close();
+					byte[] outbuffer = picdata.getBytes();
+					//Log.d(LOG_TAG,String.valueOf(outbuffer.length));
+					outputfile.write(outbuffer);
+					//outputfile.write(base64decoder.decodeBuffer(picdata));
+					outputfile.close();
+
 					httpUtils.doPostAsyn(picurl, picupload.picUploadGet(), new httpUtils.HttpCallBackListener() {
 	            		@Override
 	            		public void onFinish(String result) {
@@ -410,9 +446,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 
 			loginfo.lockSet(lockstruct);
 			loginfo.tireSet(tirepressure);
-			//loginfo.typeSet("0");	
-
-			//FileInputStream 			
+			//loginfo.typeSet("0");				
 
 			//if(flag){
 				//params.put("truck_sid", "1");
@@ -443,11 +477,76 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private void updateLocation(Location location){
 		if(location != null){
 			tLogView.append(location.toString());
-			gpsx = Double.toString(location.getLongitude());
-			gpsy = Double.toString(location.getLatitude());
+			gpsx = String.format("%.9f", location.getLongitude());
+			gpsy = String.format("%.9f", location.getLatitude());
 			loginfo.gpsSet(gpsx,gpsy);
 		}else{
 			Log.d(LOG_TAG, "no location object");
+		}
+	}
+
+	//serials read thread
+	private class ReadThread extends Thread{
+		@Override
+		public void run(){
+			super.run();
+			List<String> data = new ArrayList<String>();
+			int sum = 0x00;
+			while(!isInterrupted()){
+				int size;
+				try{
+					byte[] buffer = new byte[64];
+					if (mInputStream == null) return;
+					size = mInputStream.read(buffer);
+					if(size > 0){
+						List<String> siz = new ArrayList<String> ();
+						for(int i=0; i<size;i++){
+							String s = Integer.toHexString(buffer[i]&0xFF);
+							if(s.length()<2){
+								siz.add("0"+s);
+							}else{
+								siz.add(s);
+							}
+						}
+						Log.d(LOG_TAG,String.valueOf(size)+" "+siz.toString());
+					}
+
+					if(size == 10){
+						data.clear();
+						for(int i = 1; i < size; i++){
+							String hv = Integer.toHexString(buffer[i] & 0xFF);
+							if(hv.length()<2){
+								data.add("0"+hv);
+							}else{
+								data.add(hv);
+							}
+							sum += buffer[i] & 0xFF;
+						}
+					}else if(size == 2){
+						//Log.d(LOG_TAG, "size 2"+"\t"+Integer.toHexString(buffer[0] & 0xFF)+"\t"+Integer.toHexString(sum & 0xFF));
+						if((sum & 0xFF) == (buffer[0] & 0xFF)){
+							//Log.d(LOG_TAG, data.toString());
+							Message msg = new Message();
+							msg.obj = data;
+							//TODO
+							sehandler.sendMessage(msg);
+							sum = 0;
+						}else{
+							data.clear();
+							sum = 0;
+							Log.e(LOG_TAG, "crc error");
+						}
+					}else{
+						data.clear();
+						sum = 0;
+						Log.e(LOG_TAG, "size error");
+					}
+
+				}catch (IOException e){
+					e.printStackTrace();
+					return;
+				}
+			}
 		}
 	}
 
@@ -477,7 +576,34 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		    }
 		    
     	}
-    }		
+    }	
+
+    //serials handler
+    Handler sehandler = new Handler(){
+    	@Override
+    	public void handleMessage(Message msg){
+    		ArrayList<String> data = (ArrayList<String>) msg.obj;
+    		//Log.d(LOG_TAG, data.toString());
+    		String devid = data.get(3)+data.get(4)+data.get(5)+data.get(6);
+    		if(devid.equals("55667788")){
+    			String flag = data.get(7);
+    			if(flag.equals("00")){
+    				if(data.get(8).equals("00")){
+						lockstruct[0].setlockStatus("0");
+						tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
+					}else if(data.get(8).equals("01")){
+						lockstruct[0].setlockStatus("1");
+						tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
+					}
+    			}else if(flag.equals("01")){
+    				loginfo.leakstatusSet(data.get(8));
+    			}else if(flag.equals("02")){
+
+    			}
+    		}
+    		
+    	}
+    };	
 	
 	//http handler
 	Handler handler = new Handler(){
@@ -659,6 +785,41 @@ public class LedActivity extends Activity implements mPictureCallBack{
     	super.onDestroy();
     }
 
+    private byte[] packdata(String devid, String data){
+    	String temp = "80 55 07 02 "+devid+" 00 "+data;
+    	String[] subtemp = temp.split(" ");
+    	byte[] tempbyte = new byte[subtemp.length+2];
+    	for(int i = 0; i < subtemp.length; i++){
+    		if(subtemp[i].length() != 2){
+    			tempbyte[i] = 00;
+    			continue;
+    		}
+    		try{
+    			tempbyte[i] = (byte)Integer.parseInt(subtemp[i], 16);
+    		}catch (Exception e){
+    			tempbyte[i] = 00;
+    			continue;
+    		}
+    	}
+    	byte sum = 0;
+    	for(int i = 1; i < subtemp.length; i++){
+    		sum += tempbyte[i];
+    	}
+    	tempbyte[subtemp.length] = sum;
+    	tempbyte[subtemp.length+1] = (byte) 0x81;
+    	List<String> re = new ArrayList<String>();
+    	for(int i = 0; i<tempbyte.length; i++){
+    		String s = Integer.toHexString(tempbyte[i]&0xFF);
+			if(s.length()<2){
+				re.add("0"+s);
+			}else{
+				re.add(s);
+			}
+    	}
+    	Log.d(LOG_TAG, re.toString());
+    	return tempbyte;
+    }
+
 	// 自定义的事件监听器类，用来处理CheckBox选中和取消事件
 	public class MyClickListener implements OnClickListener {
 		@Override
@@ -669,12 +830,45 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				//根据选中/取消状态来控制lock的开/关
 				//controlLed(i + 1, cb[i].isChecked());
 				if(cb[0].isChecked()){
-					mlocalcapture.setCapturePath(0);
+					//mlocalcapture.setCapturePath(0);
+					loginfo.speedSet(20);
+					Log.d(LOG_TAG, loginfo.logInfoGet().toString());
+					httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+                    @Override
+                    public void onFinish(String result) {
+                   	Message message = new Message();
+                   		message.what = MESSAGE_HEARTPACKAGE;
+                    	message.obj = result;
+                    	handler.sendMessage(message);
+          
+                    }
+
+                    @Override
+               	    public void onError(Exception e) {
+                    }
+		        });
+					loginfo.speedSet(0);
 				}
 				
 			}else if(v == cb[1]){
 				if(cb[1].isChecked()){
-					mlocalcapture.setCapturePath(2);
+					try{
+						mOutputStream.write(packdata("55 66 77 88", "00"));
+						mOutputStream.write('\n');
+					} catch (IOException e){
+						e.printStackTrace();
+						Log.e(LOG_TAG,"send failed");
+					}
+					
+					//mlocalcapture.setCapturePath(2);
+				}else{
+					try{
+						mOutputStream.write(packdata("55 66 77 88", "00"));
+						mOutputStream.write('\n');
+					} catch (IOException e){
+						e.printStackTrace();
+						Log.e(LOG_TAG,"send failed");
+					}
 				}
 			}
 			
