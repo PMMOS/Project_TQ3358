@@ -35,6 +35,11 @@ import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -110,15 +115,15 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
 	private String picurl = "http://120.76.219.196:80/file/upload";
 	private static HashMap<String, String> params = new HashMap<String, String>();
-	private static HashMap<String, String> cidparams = new HashMap<String, String>();
-	private static lockStruct[] lockstruct = new lockStruct[5];
-	private static String[] lockstatustemp = new String[5];
-	private static tirePressure[] tirepressure = new tirePressure[2];
-	private static logInfo loginfo = new logInfo();
+	private static HashMap<String, String> cidparams = new HashMap<String, String>(); 
+	private static logInfo loginfo = new logInfo(); //data package uploaded
 	private static boolean flag;
-	private static int cnt;
-	private static int cansendPid[] = {0x05,0x0C,0x0D,0x21,0x2F}; 
-	private static int canCnt;
+	private static int cnt;	
+
+	//Timer timer = new Timer();
+	Timer cansendtime = new Timer();
+	Timer time = new Timer();
+	ExecutorService executorService = Executors.newFixedThreadPool(2);
 
 	//gps
 	Location location;
@@ -128,9 +133,14 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	//can总线
 	private static IMycanService mycanservice;
 	private static mycanHandler canhandler;
-	public static int ret;
-	private static int distance0;
-	private static int disCnt;
+	public static int ret; //can receive result
+	private static int distance0; //get the first distance data
+	private static int disCnt; //distance counter
+	private static int cansendPid[] = {0x05,0x0C,0x0D,0x21,0x2F};  //can pid
+	private static int canCnt; //can pid counter
+	private static lockStruct[] lockstruct = new lockStruct[5];
+	private static String[] lockstatustemp = new String[5];
+	private static tirePressure[] tirepressure = new tirePressure[2];
 
 	//video
 	private mLocalCaptureCallBack mlocalcapture;
@@ -139,13 +149,15 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private FragmentManager fgm;
 	private FragmentTransaction fgt;
 	private DeviceLoginFragment devlogfragment;
+	private static String[] snapsid = new String[3];
+	private static int sidcnt;
 	
 	//serials
 	protected SerialPort mSerialPort;
 	protected OutputStream mOutputStream;
 	private InputStream mInputStream;
 	private ReadThread mReadThread;
-
+	private ReGetuiApplication app;
 
 	//CheckBox数组，用来存放2个led灯控件
 	CheckBox[] cb = new CheckBox[2];
@@ -162,7 +174,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		setContentView(R.layout.main);
 
 		context = LedActivity.this.getApplicationContext();
-		
+		app = (ReGetuiApplication) getApplicationContext();
 		
 		//获取xml中对应的控件
 		cb[0] = (CheckBox) findViewById(R.id.cb_Lock1);
@@ -196,8 +208,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		lockstruct[3] = new lockStruct("down_left","0");
 		lockstruct[4] = new lockStruct("down_right","0");
 
-		tirepressure[0] = new tirePressure("lefttirepressure","0");
-		tirepressure[1] = new tirePressure("righttirepressure","0");
+		tirepressure[0] = new tirePressure("lefttirepressure","0","lefttiretemp","0");
+		tirepressure[1] = new tirePressure("righttirepressure","0","righttiretemp","0");
 		
 		for (int i = 0; i < 5; i++){
 			lockstatustemp[i] = "0";
@@ -248,7 +260,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	            @Override
 	            public void onError(Exception e) {
 	            }
-
 	        });
 		}
 
@@ -265,8 +276,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			
 			} catch (InvalidParameterException e) {
 			
-			}
-			
+			}	
 		}else{
 			Log.e(LOG_TAG, "file not found");
 		}
@@ -318,16 +328,15 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			canhandler = new mycanHandler();
 		}
 
-		mReadThread = new ReadThread();
-		mReadThread.start();
-		
 		canCnt = 0;
 		disCnt = 0;
-		can_Rev canrev = new can_Rev();
-        Thread rev = new Thread(canrev);
-        rev.start();
+		ReadThread mReadThread = new ReadThread();
+		CanRev mCanRev = new CanRev();
+		executorService.execute(mReadThread);
+		executorService.execute(mCanRev);
 
         //video initial
+        sidcnt = 0;
         FunSupport.getInstance().init(context);
         SharedPreferences sharedPreferences = getSharedPreferences(SPNames.UserInfo.getValue(), Context.MODE_PRIVATE);
         File f = new File("root"+File.separator+"mnt");
@@ -354,7 +363,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
         	Log.d(LOG_TAG,"fragment create");
         }
 		
-		timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
+		//timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
+		cansendtime.schedule(cansendtask, 1000, 5000);
+		time.schedule(heartpacktask, 5000, 60000);
 	}
 
 	@Override
@@ -418,17 +429,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		}
 	}
 
-	Timer timer = new Timer();
-	TimerTask task = new TimerTask() {
+	//can send
+	TimerTask cansendtask = new TimerTask(){
 		@Override
 		public void run(){
-			for(int i = 0; i < 5; i++){
-				if(!lockstatustemp[i].equals(lockstruct[i].getlockStatus())){
-					flag = true;
-					break;
-				}
-				//flag = false;
-			}
 			//Mycan send
 			try{
 				mycanservice.set_data(0,2);
@@ -440,10 +444,25 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				mycanservice.mycansend(0x18DB33F1,8,1,0,0,1);
 				canCnt += 1;
 				canCnt = canCnt==5?0:canCnt;
+				Log.d(LOG_TAG, "Mycan SEND");
 			}catch(RemoteException e){
 				e.printStackTrace();
 			}
+		}
+	};
 
+	//heart package upload
+	TimerTask heartpacktask = new TimerTask() {
+		@Override
+		public void run(){
+			for(int i = 0; i < 5; i++){
+				if(!lockstatustemp[i].equals(lockstruct[i].getlockStatus())){
+					flag = true;
+					break;
+				}
+				//flag = false;
+			}
+			
 			loginfo.lockSet(lockstruct);
 			loginfo.tireSet(tirepressure);
 			//loginfo.typeSet("0");				
@@ -468,7 +487,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
                     }
 		        });
 				//params.clear();					
-				
 		    //}
 		}							
 	};
@@ -486,13 +504,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	}
 
 	//serials read thread
-	private class ReadThread extends Thread{
+	private class ReadThread implements Runnable{
 		@Override
 		public void run(){
-			super.run();
 			List<String> data = new ArrayList<String>();
 			int sum = 0x00;
-			while(!isInterrupted()){
+			while(!Thread.currentThread().isInterrupted()){
 				int size;
 				try{
 					byte[] buffer = new byte[64];
@@ -551,7 +568,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	}
 
 	//can总线线程
-	private class can_Rev implements Runnable{
+	private class CanRev implements Runnable{
 	    @Override
 	    public void run(){
     		//TODO
@@ -632,11 +649,16 @@ public class LedActivity extends Activity implements mPictureCallBack{
     					JSONObject js = new JSONObject(s);
     					JSONObject cont = js.getJSONObject("content");
     					int picsid = cont.getInt("sid");
+    					if(sidcnt < 3){
+    						snapsid[sidcnt++] = String.valueOf(picsid);
+    					}else{
+    						loginfo.snapshotSet(snapsid);
+    						sidcnt = 0;
+    					}
     					Log.d(LOG_TAG, String.valueOf(picsid));
     				}catch(JSONException e){
     					e.printStackTrace();
-    				}	
-    				
+    				}		
     			}break;
     			case MESSAGE_GETUI:{
     				String s =(String) msg.obj;
@@ -656,14 +678,19 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				System.out.println(Long.toHexString(id));
 				if(id == 0x18FEF433){
 					ArrayList<Integer> res =(ArrayList<Integer>) msg.obj;
+					//Log.d(LOG_TAG, res.toString());
 					int tirepos = res.get(0);
 					int tirepre = res.get(1)*8;
 					double tiretem = ((int)res.get(2)*256+(int)res.get(3))*0.03125-273;
 					double tirev = ((int)res.get(5)*256+(int)res.get(6))*0.1;
 					int tiretype = res.get(7) >> 5;
-					tirepressure[tirepos].settireVal(String.valueOf(tirepre));
+					if(tirepos < tirepressure.length){
+						tirepressure[tirepos].settireVal(String.valueOf(tirepre));
+						tirepressure[tirepos].settireTempVal(String.format("%.2f", tiretem));
+					}
 					if(tLogView != null){
-						tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
+						Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
+						//tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
 				}else if(id == 0x18DAF100){
 					ArrayList<Integer> res = (ArrayList<Integer>) msg.obj;
@@ -705,7 +732,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					}
 				}else{
 					if(tLogView != null){
-						tLogView.append(Long.toHexString(id)+"\n");
+						//tLogView.append(Long.toHexString(id)+"\n");
+						Log.d(LOG_TAG, Long.toHexString(id)+"\n");
 					}
 				}
 				
@@ -785,41 +813,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
     	super.onDestroy();
     }
 
-    private byte[] packdata(String devid, String data){
-    	String temp = "80 55 07 02 "+devid+" 00 "+data;
-    	String[] subtemp = temp.split(" ");
-    	byte[] tempbyte = new byte[subtemp.length+2];
-    	for(int i = 0; i < subtemp.length; i++){
-    		if(subtemp[i].length() != 2){
-    			tempbyte[i] = 00;
-    			continue;
-    		}
-    		try{
-    			tempbyte[i] = (byte)Integer.parseInt(subtemp[i], 16);
-    		}catch (Exception e){
-    			tempbyte[i] = 00;
-    			continue;
-    		}
-    	}
-    	byte sum = 0;
-    	for(int i = 1; i < subtemp.length; i++){
-    		sum += tempbyte[i];
-    	}
-    	tempbyte[subtemp.length] = sum;
-    	tempbyte[subtemp.length+1] = (byte) 0x81;
-    	List<String> re = new ArrayList<String>();
-    	for(int i = 0; i<tempbyte.length; i++){
-    		String s = Integer.toHexString(tempbyte[i]&0xFF);
-			if(s.length()<2){
-				re.add("0"+s);
-			}else{
-				re.add(s);
-			}
-    	}
-    	Log.d(LOG_TAG, re.toString());
-    	return tempbyte;
-    }
-
 	// 自定义的事件监听器类，用来处理CheckBox选中和取消事件
 	public class MyClickListener implements OnClickListener {
 		@Override
@@ -840,7 +833,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
                    		message.what = MESSAGE_HEARTPACKAGE;
                     	message.obj = result;
                     	handler.sendMessage(message);
-          
                     }
 
                     @Override
@@ -853,7 +845,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			}else if(v == cb[1]){
 				if(cb[1].isChecked()){
 					try{
-						mOutputStream.write(packdata("55 66 77 88", "00"));
+						mOutputStream.write(app.packdata("55 66 77 88", "00"));
 						mOutputStream.write('\n');
 					} catch (IOException e){
 						e.printStackTrace();
@@ -863,7 +855,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					//mlocalcapture.setCapturePath(2);
 				}else{
 					try{
-						mOutputStream.write(packdata("55 66 77 88", "00"));
+						mOutputStream.write(app.packdata("55 66 77 88", "01"));
 						mOutputStream.write('\n');
 					} catch (IOException e){
 						e.printStackTrace();

@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.security.InvalidParameterException;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Timer;
 
 import org.json.JSONObject;
 import org.json.JSONException;
@@ -33,6 +36,7 @@ public class ReGetuiApplication extends Application {
 	private static String sid = new String();
 	private static String type = new String();
 	private static String operate = new String();
+	public static int modeselect;
 	
 	private static HashMap<String, String> reparams = new HashMap<String, String>();
 		
@@ -60,7 +64,13 @@ public class ReGetuiApplication extends Application {
     				type = command.getString("type");
     				
     				switch(Integer.parseInt(type)){
-    					case 0: break;
+    					case 0: {
+    						if(ReActivity.time != null){
+    							ReActivity.time.cancel();
+    						}
+    						ReActivity.time = new Timer();
+    						ReActivity.time.schedule(ReActivity.heartpacktask, 5000, 60000);
+    					}break;
     					case 1: {
     						operate = command.getString("operate");
     						if(operate.equals("0")){
@@ -92,33 +102,46 @@ public class ReGetuiApplication extends Application {
 			        			//temp = true;
 			        			temp = ReActivity.ledSetOff(2);
 			        			//ReActivity.mOutputStream.write();
-			        		}	        	
+			        		}
+			        		int ope = temp?1:0;
+			    			reparams.put("sid", sid);
+			    			reparams.put("type", type);
+			    			reparams.put("operate", String.valueOf(ope));
+			    			httpUtils.doPostAsyn(url, reparams, new httpUtils.HttpCallBackListener() {
+					            @Override
+					            public void onFinish(String result) {
+					                Message message = new Message();
+					                message.obj=result;
+					                rehandler.sendMessage(message);
+					            }
+
+					            @Override
+					            public void onError(Exception e) {
+					            }
+
+					        });
     					}break;
-    					case 2: break;
-    					case 3: break;
+    					case 2: {
+    						if(ReActivity.time != null){
+    							ReActivity.time.cancel();
+    						}
+    						//ReActivity.time = new Timer();
+    						//TODO All message send
+    					}break;
+    					case 3: {
+    						if(ReActivity.time != null){
+    							ReActivity.time.cancel();
+    						}
+    						ReActivity.time = new Timer();
+    						//TODO Send params tirepressure tiretemp
+    					}break;
     					default: break;
     				}  				      					  				
     			} catch (JSONException e) {
     				// TODO Auto-generated catch block
     				e.printStackTrace();
     			}
-    			int ope = temp?1:0;
-    			reparams.put("sid", sid);
-    			reparams.put("type", type);
-    			reparams.put("operate", String.valueOf(ope));
-    			httpUtils.doPostAsyn(url, reparams, new httpUtils.HttpCallBackListener() {
-		            @Override
-		            public void onFinish(String result) {
-		                Message message = new Message();
-		                message.obj=result;
-		                rehandler.sendMessage(message);
-		            }
-
-		            @Override
-		            public void onError(Exception e) {
-		            }
-
-		        });
+    			
         		if(ReActivity.tLogView != null){
     				ReActivity.tLogView.append(msg.obj + "\t"+ temp +"\n");
     			}
@@ -141,7 +164,7 @@ public class ReGetuiApplication extends Application {
         };
     }
 
-    private byte[] packdata(String devid, String data){
+    public byte[] packdata(String devid, String data){
     	String temp = "80 55 07 02 "+devid+" 00 "+data;
     	String[] subtemp = temp.split(" ");
     	byte[] tempbyte = new byte[subtemp.length+2];
@@ -163,6 +186,16 @@ public class ReGetuiApplication extends Application {
     	}
     	tempbyte[subtemp.length] = sum;
     	tempbyte[subtemp.length+1] = (byte) 0x81;
+    	List<String> re = new ArrayList<String>();
+    	for(int i = 0; i<tempbyte.length; i++){
+    		String s = Integer.toHexString(tempbyte[i]&0xFF);
+			if(s.length()<2){
+				re.add("0"+s);
+			}else{
+				re.add(s);
+			}
+    	}
+    	Log.d(LOG_TAG, re.toString());
     	return tempbyte;
     }
 

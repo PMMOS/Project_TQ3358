@@ -54,7 +54,8 @@ public class logInfo{
 	public void tireSet(tirePressure[] tirepressure){
 		tire_val = new tirePressure[tirepressure.length];
 		for (int i=0; i<tirepressure.length; i++){
-			tire_val[i] = new tirePressure(tirepressure[i].gettireName(), tirepressure[i].gettireVal());
+			tire_val[i] = new tirePressure(tirepressure[i].gettireName(), tirepressure[i].gettireVal(), 
+				tirepressure[i].gettireTempName(), tirepressure[i].gettireTempVal());
 		}
 	}
 
@@ -69,8 +70,8 @@ public class logInfo{
 
 	public void leakstatusSet(String leakstatus){
 		this.leakstatus = leakstatus;
-		haswarn = "1";
-		warntype = "2";
+		//haswarn = "1";
+		//warntype = "2";
 	}
 
 	public void speedSet(int speedval){
@@ -112,6 +113,7 @@ public class logInfo{
 
 		for(int i = 0; i< tire_val.length; i++){
 			log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
+			log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 		}
 		log_val.put("trucknumber", "3");
 		log_val.put("haswarn",haswarn);
