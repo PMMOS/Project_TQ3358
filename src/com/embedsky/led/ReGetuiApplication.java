@@ -65,11 +65,21 @@ public class ReGetuiApplication extends Application {
     				
     				switch(Integer.parseInt(type)){
     					case 0: {
+                            if(ReActivity.heartpacktask != null){
+                                ReActivity.heartpacktask.cancel();
+                            }
+                            if(ReActivity.warnpacktask != null){
+                                ReActivity.warnpacktask.cancel();
+                            }
     						if(ReActivity.time != null){
     							ReActivity.time.cancel();
     						}
+                            ReActivity.loginfo.logtypeSet(0);
     						ReActivity.time = new Timer();
+                            ReActivity.heartpacktask = ReActivity.new HeartpackTask();
+                            ReActivity.warnpacktask = ReActivity.new WarnpackTask();
     						ReActivity.time.schedule(ReActivity.heartpacktask, 5000, 60000);
+                            ReActivity.time.schedule(ReActivity.warnpacktask, 6000, 20000);
     					}break;
     					case 1: {
     						operate = command.getString("operate");
@@ -79,6 +89,9 @@ public class ReGetuiApplication extends Application {
 		        				try{
 		        					ReActivity.mOutputStream.write(packdata("55 66 77 88", "00"));
 		        					ReActivity.mOutputStream.write('\n');
+                                    for(int i = 0; i < 3; i++){
+                                        ReActivity.lockstatustemp[i] = "0";
+                                    }
 		        				}catch (IOException e){
 		        					temp = false;
 		        					e.printStackTrace();
@@ -90,6 +103,9 @@ public class ReGetuiApplication extends Application {
 			        			try{
 		        					ReActivity.mOutputStream.write(packdata("55 66 77 88", "01"));
 		        					ReActivity.mOutputStream.write('\n');
+                                    for(int i = 0; i < 3; i++){
+                                        ReActivity.lockstatustemp[i] = "1";
+                                    }
 		        				}catch (IOException e){
 		        					temp = false;
 		        					e.printStackTrace();
@@ -98,10 +114,16 @@ public class ReGetuiApplication extends Application {
 			        			//temp = true;
 			        			temp = ReActivity.ledSetOn(2);
 			        			//ReActivity.mOutputStream.write();
+                                for(int i = 3; i < 5; i++){
+                                    ReActivity.lockstatustemp[i] = "0";
+                                }
 			        		}else if(operate.equals("3")){
 			        			//temp = true;
 			        			temp = ReActivity.ledSetOff(2);
 			        			//ReActivity.mOutputStream.write();
+                                for(int i = 3; i < 5; i++){
+                                    ReActivity.lockstatustemp[i] = "1";
+                                }
 			        		}
 			        		int ope = temp?1:0;
 			    			reparams.put("sid", sid);
@@ -126,13 +148,22 @@ public class ReGetuiApplication extends Application {
     							ReActivity.time.cancel();
     						}
     						//ReActivity.time = new Timer();
-    						//TODO All message send
+    						//TODO All message send and captureImg
+                            ReActivity.loginfo.logtypeSet(1);
+                            ReActivity.loginfo.typeflagSet("0");
+                            ReActivity.mlocalcapture.setCapturePath(0);
     					}break;
     					case 3: {
-    						if(ReActivity.time != null){
-    							ReActivity.time.cancel();
+                            if(ReActivity.paramspacktask != null){
+                                ReActivity.paramspacktask.cancel();
+                            }
+    						if(ReActivity.time != null){ 
+                                ReActivity.time.cancel();
     						}
+                            ReActivity.loginfo.logtypeSet(2);
     						ReActivity.time = new Timer();
+                            ReActivity.paramspacktask = ReActivity.new ParamspackTask();
+                            ReActivity.time.schedule(ReActivity.paramspacktask, 5000, 30000);
     						//TODO Send params tirepressure tiretemp
     					}break;
     					default: break;
@@ -141,7 +172,7 @@ public class ReGetuiApplication extends Application {
     				// TODO Auto-generated catch block
     				e.printStackTrace();
     			}
-    			
+    			Log.d(LOG_TAG, (String) msg.obj);
         		if(ReActivity.tLogView != null){
     				ReActivity.tLogView.append(msg.obj + "\t"+ temp +"\n");
     			}

@@ -35,6 +35,7 @@ import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -100,6 +101,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private final int MESSAGE_GETUI = 0x100;
 	private final int MESSAGE_HEARTPACKAGE = 0x101;
 	private final int MESSAGE_FILEUPLOAD = 0x102;
+	private final int MESSAGE_WARNPACKAGE = 0x103;
+	private final int MESSAGE_PARAMSPACKAGE = 0x104;
+	private final int MESSAGE_TESTPACKAGE = 0x105;
 
 	//初始化led
 	public static native boolean ledInit();
@@ -114,16 +118,23 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
 	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
 	private String picurl = "http://120.76.219.196:80/file/upload";
+	private String testurl = "http://120.76.219.196:85/test/getTruckLogResp";
+
 	private static HashMap<String, String> params = new HashMap<String, String>();
 	private static HashMap<String, String> cidparams = new HashMap<String, String>(); 
-	private static logInfo loginfo = new logInfo(); //data package uploaded
+	protected static logInfo loginfo = new logInfo(); //data package uploaded
+	private static int[] warntypecnt = new int[10];
+	private static LinkedList<HashMap<String, String>> warnmsgbuf = new LinkedList<HashMap<String, String>>();
 	private static boolean flag;
 	private static int cnt;	
 
 	//Timer timer = new Timer();
 	Timer cansendtime = new Timer();
 	Timer time = new Timer();
-	ExecutorService executorService = Executors.newFixedThreadPool(2);
+	ExecutorService executorService = Executors.newFixedThreadPool(3);
+	protected HeartpackTask heartpacktask;
+	protected ParamspackTask paramspacktask;
+	protected WarnpackTask warnpacktask;
 
 	//gps
 	Location location;
@@ -136,14 +147,13 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	public static int ret; //can receive result
 	private static int distance0; //get the first distance data
 	private static int disCnt; //distance counter
+	private static double fuelleveltemp = 100;
 	private static int cansendPid[] = {0x05,0x0C,0x0D,0x21,0x2F};  //can pid
 	private static int canCnt; //can pid counter
-	private static lockStruct[] lockstruct = new lockStruct[5];
-	private static String[] lockstatustemp = new String[5];
 	private static tirePressure[] tirepressure = new tirePressure[2];
 
 	//video
-	private mLocalCaptureCallBack mlocalcapture;
+	public mLocalCaptureCallBack mlocalcapture;
 	private Context context;
 	private FunDeviceUtils fdu;
 	private FragmentManager fgm;
@@ -157,7 +167,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	protected OutputStream mOutputStream;
 	private InputStream mInputStream;
 	private ReadThread mReadThread;
-	private ReGetuiApplication app;
+	private ReGetuiApplication app;//get packdata methods
+	private static lockStruct[] lockstruct = new lockStruct[5];
+	public static String[] lockstatustemp = new String[5];
+	private static int lockwarncnt;
 
 	//CheckBox数组，用来存放2个led灯控件
 	CheckBox[] cb = new CheckBox[2];
@@ -207,12 +220,18 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		lockstruct[2] = new lockStruct("up_back","0");
 		lockstruct[3] = new lockStruct("down_left","0");
 		lockstruct[4] = new lockStruct("down_right","0");
+		loginfo.lockSet(lockstruct);
 
 		tirepressure[0] = new tirePressure("lefttirepressure","0","lefttiretemp","0");
 		tirepressure[1] = new tirePressure("righttirepressure","0","righttiretemp","0");
+		loginfo.tireSet(tirepressure);
 		
 		for (int i = 0; i < 5; i++){
 			lockstatustemp[i] = "0";
+		}
+
+		for (int i = 0; i < warntypecnt.length; i++){
+			warntypecnt[i] = 0;
 		}
 		
 		// 退出按钮点击事件处理
@@ -243,7 +262,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("trucknumber","123");
+			cidparams.put("trucknumber","22");
 			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
@@ -280,6 +299,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		}else{
 			Log.e(LOG_TAG, "file not found");
 		}
+		lockwarncnt = 0;
 		
 		//gps initial
 		LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
@@ -364,8 +384,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
         }
 		
 		//timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
+		heartpacktask = new HeartpackTask();
+		warnpacktask = new WarnpackTask();
 		cansendtime.schedule(cansendtask, 1000, 5000);
 		time.schedule(heartpacktask, 5000, 60000);
+		time.schedule(warnpacktask, 6000, 20000);
 	}
 
 	@Override
@@ -444,7 +467,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				mycanservice.mycansend(0x18DB33F1,8,1,0,0,1);
 				canCnt += 1;
 				canCnt = canCnt==5?0:canCnt;
-				Log.d(LOG_TAG, "Mycan SEND");
+				//Log.d(LOG_TAG, "Mycan SEND");
 			}catch(RemoteException e){
 				e.printStackTrace();
 			}
@@ -452,44 +475,75 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	};
 
 	//heart package upload
-	TimerTask heartpacktask = new TimerTask() {
+	public class HeartpackTask extends TimerTask {
 		@Override
 		public void run(){
-			for(int i = 0; i < 5; i++){
-				if(!lockstatustemp[i].equals(lockstruct[i].getlockStatus())){
-					flag = true;
-					break;
+			//TODO is not necessary
+			if(loginfo.haswarnGet().equals("0")){
+				for (int i = 0; i < warntypecnt.length; i++){
+					warntypecnt[i] = 0;
 				}
-				//flag = false;
 			}
-			
-			loginfo.lockSet(lockstruct);
-			loginfo.tireSet(tirepressure);
-			//loginfo.typeSet("0");				
+			Log.d(LOG_TAG, loginfo.logInfoGet().toString());
+			httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+                @Override
+                public void onFinish(String result) {
+               	Message message = new Message();
+               		message.what = MESSAGE_HEARTPACKAGE;
+                	message.obj = result;
+                	handler.sendMessage(message);
+                }
 
-			//if(flag){
-				//params.put("truck_sid", "1");
-				//params.put("log", loginfo.logInfoGet().toString());
-				System.out.println(loginfo.logInfoGet().toString()+"\n");
-				Log.d(LOG_TAG, loginfo.logInfoGet().toString());
-				httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
-                    @Override
-                    public void onFinish(String result) {
-                   	Message message = new Message();
-                   		message.what = MESSAGE_HEARTPACKAGE;
-                    	message.obj = result;
-                    	handler.sendMessage(message);
-          
-                    }
-
-                    @Override
-               	    public void onError(Exception e) {
-                    }
-		        });
-				//params.clear();					
-		    //}
+                @Override
+           	    public void onError(Exception e) {
+                }
+	        });
 		}							
-	};
+	}
+
+	//warnpackage upload
+	public class WarnpackTask extends TimerTask {
+		@Override
+		public void run() {
+			if (!warnmsgbuf.isEmpty()){
+				httpUtils.doPostAsyn(url, warnmsgbuf.get(0), new httpUtils.HttpCallBackListener() {
+	                @Override
+	                public void onFinish(String result) {
+	               	Message message = new Message();
+	               		message.what = MESSAGE_WARNPACKAGE;
+	                	message.obj = result;
+	                	handler.sendMessage(message);
+	                	warnmsgbuf.removeFirst();
+	                }
+
+	                @Override
+	           	    public void onError(Exception e) {
+	                }
+	        	});
+			}
+		}
+	}
+
+	//parameters upload
+	public class ParamspackTask extends TimerTask {
+		@Override
+		public void run() {
+			Log.d(LOG_TAG, loginfo.logInfoGet().toString());
+			httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+                @Override
+                public void onFinish(String result) {
+               	Message message = new Message();
+               		message.what = MESSAGE_PARAMSPACKAGE;
+                	message.obj = result;
+                	handler.sendMessage(message);
+                }
+
+                @Override
+           	    public void onError(Exception e) {
+                }
+	        });
+		}
+	}
 
 	//gps update
 	private void updateLocation(Location location){
@@ -601,10 +655,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
     	public void handleMessage(Message msg){
     		ArrayList<String> data = (ArrayList<String>) msg.obj;
     		//Log.d(LOG_TAG, data.toString());
+    		String flag = data.get(7);
     		String devid = data.get(3)+data.get(4)+data.get(5)+data.get(6);
-    		if(devid.equals("55667788")){
-    			String flag = data.get(7);
-    			if(flag.equals("00")){
+    		if(flag.equals("00")){
+    			if(devid.equals("55667788")){	
     				if(data.get(8).equals("00")){
 						lockstruct[0].setlockStatus("0");
 						tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
@@ -612,13 +666,43 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						lockstruct[0].setlockStatus("1");
 						tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
 					}
-    			}else if(flag.equals("01")){
-    				loginfo.leakstatusSet(data.get(8));
-    			}else if(flag.equals("02")){
-
+					//TODO Compare status 
+					//warnflagSet and mlocalcapture.setCapturePath(0)
+				}
+				for(int i = 0 ; i < lockstruct.length; i++){
+					if(!lockstruct[i].getlockStatus().equals(lockstatustemp[i])){
+						lockwarncnt += 1 ;
+						break;
+					}
+					if( i == lockstruct.length-1) {
+						lockwarncnt = 0;
+					}
+				}
+				if(lockwarncnt > 3){
+					if(warntypecnt[1] < 2) {
+						loginfo.typeflagSet("1");
+						mlocalcapture.setCapturePath(0);
+						warntypecnt[1] += 1;
+					}
+				}
+				loginfo.lockSet(lockstruct);
+    		}else if(flag.equals("01")){
+    			if(devid.equals("55667788")){
+    				int leakstatusval = Integer.parseInt(data.get(8),16);
+    				loginfo.leakstatusSet(String.valueOf(leakstatusval));
+    				//TODO Compare leakstatus and send 
+    				if(leakstatusval < 64){
+    					if(warntypecnt[1] < 2){
+    						loginfo.haswarnSet("1");
+    						loginfo.typeSet("2");
+    						warnmsgbuf.add(loginfo.logInfoGet());
+    						warntypecnt[1] += 1;
+    					}
+    				}
     			}
-    		}
-    		
+    		}else if(flag.equals("02")){
+
+    		}	
     	}
     };	
 	
@@ -636,10 +720,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						tx[5].setText(s+String.valueOf(cnt));	
 						cnt += 1;
 						//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
-						for (int i = 0; i < 5; i++){
-							lockstatustemp[i] = lockstruct[i].getlockStatus();
-						}
-						flag = false;
 					} 
     			}break;
     			case MESSAGE_FILEUPLOAD:{
@@ -654,6 +734,31 @@ public class LedActivity extends Activity implements mPictureCallBack{
     					}else{
     						loginfo.snapshotSet(snapsid);
     						sidcnt = 0;
+    						if(loginfo.typeflagGet() != null){
+    							loginfo.haswarnSet("1");
+    							loginfo.typeSet(loginfo.typeflagGet());
+    							if(loginfo.typeflagGet().equals("0")){
+									Log.d(LOG_TAG, loginfo.logInfoGet().toString());
+									httpUtils.doPostAsyn(testurl, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+					                    @Override
+					                    public void onFinish(String result) {
+					                   	Message message = new Message();
+					                   		message.what = MESSAGE_TESTPACKAGE;
+					                    	message.obj = result;
+					                    	handler.sendMessage(message);
+					                    }
+
+					                    @Override
+					               	    public void onError(Exception e) {
+					                    }
+							        });
+    							}else{
+    								warnmsgbuf.add(loginfo.logInfoGet());
+    							}
+    							loginfo.typeflagSet(null);
+    						}
+    						//TODO trig capture end
+    						mlocalcapture.setCapturePath(2);
     					}
     					Log.d(LOG_TAG, String.valueOf(picsid));
     				}catch(JSONException e){
@@ -661,6 +766,18 @@ public class LedActivity extends Activity implements mPictureCallBack{
     				}		
     			}break;
     			case MESSAGE_GETUI:{
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, s);
+    			}break;
+    			case MESSAGE_WARNPACKAGE:{
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, s);
+    			}break;
+    			case MESSAGE_PARAMSPACKAGE:{
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, s);
+    			}break;
+    			case MESSAGE_TESTPACKAGE: {
     				String s =(String) msg.obj;
     				Log.d(LOG_TAG, s);
     			}break;
@@ -688,10 +805,20 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						tirepressure[tirepos].settireVal(String.valueOf(tirepre));
 						tirepressure[tirepos].settireTempVal(String.format("%.2f", tiretem));
 					}
+					loginfo.tireSet(tirepressure);
 					if(tLogView != null){
 						Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 						//tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
+					//TODO Compare the tirevalue and tiretemperature
+				}else if(id == 0x18FEF533){
+					if(warntypecnt[3] < 2){
+						loginfo.haswarnSet("1");
+						loginfo.typeSet("3");
+						warnmsgbuf.add(loginfo.logInfoGet());
+						warntypecnt[3] += 1;
+					}
+					
 				}else if(id == 0x18DAF100){
 					ArrayList<Integer> res = (ArrayList<Integer>) msg.obj;
 					int pid = res.get(2);
@@ -708,6 +835,23 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  break;
 						case 0x0D: int v = res.get(3);
 							  loginfo.speedSet(v);
+							  //TODO Compare the speed to get stop/high-speed/exhausted drive/...
+							  //and send
+							  if(v == 0) {
+							  	if(warntypecnt[6] < 2) {
+									loginfo.haswarnSet("1");
+								  	loginfo.typeSet("6");
+								  	warnmsgbuf.add(loginfo.logInfoGet());
+								  	warntypecnt[6] += 1;
+							  	}
+							  }else if(v > 80) {
+							  	if(warntypecnt[5] < 2) {
+									loginfo.haswarnSet("1");
+								  	loginfo.typeSet("5");
+								  	warnmsgbuf.add(loginfo.logInfoGet());
+								  	warntypecnt[5] += 1;
+							  	}
+							  }
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(v)+"km/s\n");
 							  }
@@ -724,6 +868,15 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  }
 						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
 							  loginfo.fuelvolSet(fuelLevel);
+							  //TODO To Compare the fuellevel and send
+							  if(fuelLevel - fuelleveltemp > 1){
+							  	if(warntypecnt[4] < 2 ) {
+							  		loginfo.typeflagSet("4");
+							  		mlocalcapture.setCapturePath(0);
+							  		warntypecnt[4] += 1 ;
+							  	}
+							  }
+							  fuelleveltemp = fuelLevel;
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(fuelLevel)+"%\n");
 							  }
@@ -740,7 +893,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
             }
         }
     }
-	
+
+	/*
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
 		int keyCode = event.getKeyCode();
@@ -785,7 +939,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event){
     	// TODO Auto-generated method stub
-    	
+  
 		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
 			lockstruct[0].setlockStatus("off");
 			tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
@@ -805,7 +959,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		} 
 		
 		return super.onKeyDown(keyCode, event);
-    }
+    }*/
     
     @Override
     protected void onDestroy(){
