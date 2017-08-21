@@ -71,7 +71,7 @@ import android.widget.TextView;
 public class OnscreenPlayFragment extends Fragment implements OnClickListener, OnErrorListener,
 		OnInfoListener, mFunVideoViewOnTouchCallBack, OnCompletionListener, mLocalCaptureCallBack {
 
-	private static final String LOG_TAG = "onescreen";
+	private static final String LOG_TAG = "lock";
 
 	private final int MESSAGE_PLAY_MEDIA = 0x100;
 	private final int MESSAGE_AUTO_HIDE_CONTROL_BAR = 0x102;

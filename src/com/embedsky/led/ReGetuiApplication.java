@@ -25,7 +25,7 @@ import org.json.JSONException;
 
 public class ReGetuiApplication extends Application {
 
-	public static final String LOG_TAG = "lockApp";
+	public static final String LOG_TAG = "lock";
 	public static LedActivity ReActivity;
 
 	private static DemoHandler handler;
@@ -35,7 +35,7 @@ public class ReGetuiApplication extends Application {
 	private String url="http://120.76.219.196:85/lock/operate";
 	private static String sid = new String();
 	private static String type = new String();
-	private static String operate = new String();
+	private static char operate;
 	public static int modeselect;
 	
 	private static HashMap<String, String> reparams = new HashMap<String, String>();
@@ -60,11 +60,11 @@ public class ReGetuiApplication extends Application {
         	if(ReActivity != null && msg.what == 0){ 
         		try {
     				JSONObject command = new JSONObject((String) msg.obj);
-    				sid = command.getString("sid");
     				type = command.getString("type");
-    				
-    				switch(Integer.parseInt(type)){
-    					case 0: {
+    				char tp = type.charAt(0);
+                    Log.d(LOG_TAG, ""+tp);
+    				switch(tp){
+    					case '0': {
                             if(ReActivity.heartpacktask != null){
                                 ReActivity.heartpacktask.cancel();
                             }
@@ -81,9 +81,10 @@ public class ReGetuiApplication extends Application {
     						ReActivity.time.schedule(ReActivity.heartpacktask, 5000, 60000);
                             ReActivity.time.schedule(ReActivity.warnpacktask, 6000, 20000);
     					}break;
-    					case 1: {
-    						operate = command.getString("operate");
-    						if(operate.equals("0")){
+    					case '1': {
+                            sid = command.getString("sid");
+    						operate = type.charAt(1);
+    						if(operate == '0'){
 		        				//temp = true;
 		        				temp = ReActivity.ledSetOn(1);
 		        				try{
@@ -97,7 +98,7 @@ public class ReGetuiApplication extends Application {
 		        					e.printStackTrace();
 		        				}
 		        				
-	        				}else if(operate.equals("1")){
+	        				}else if(operate == '1'){
 			        			//temp = true;
 			        			temp = ReActivity.ledSetOff(1);
 			        			try{
@@ -110,14 +111,14 @@ public class ReGetuiApplication extends Application {
 		        					temp = false;
 		        					e.printStackTrace();
 		        				}
-			        		}else if(operate.equals("2")){
+			        		}else if(operate == '2'){
 			        			//temp = true;
 			        			temp = ReActivity.ledSetOn(2);
 			        			//ReActivity.mOutputStream.write();
                                 for(int i = 3; i < 5; i++){
                                     ReActivity.lockstatustemp[i] = "0";
                                 }
-			        		}else if(operate.equals("3")){
+			        		}else if(operate == '3'){
 			        			//temp = true;
 			        			temp = ReActivity.ledSetOff(2);
 			        			//ReActivity.mOutputStream.write();
@@ -127,7 +128,7 @@ public class ReGetuiApplication extends Application {
 			        		}
 			        		int ope = temp?1:0;
 			    			reparams.put("sid", sid);
-			    			reparams.put("type", type);
+			    			//reparams.put("type", type);
 			    			reparams.put("operate", String.valueOf(ope));
 			    			httpUtils.doPostAsyn(url, reparams, new httpUtils.HttpCallBackListener() {
 					            @Override
@@ -143,7 +144,11 @@ public class ReGetuiApplication extends Application {
 
 					        });
     					}break;
-    					case 2: {
+    					case '3': {
+                            Log.d(LOG_TAG, "paramstest");
+                            if(ReActivity.testtask != null){
+                                ReActivity.testtask.cancel();
+                            }
     						if(ReActivity.time != null){
     							ReActivity.time.cancel();
     						}
@@ -152,8 +157,11 @@ public class ReGetuiApplication extends Application {
                             ReActivity.loginfo.logtypeSet(1);
                             ReActivity.loginfo.typeflagSet("0");
                             ReActivity.mlocalcapture.setCapturePath(0);
+                            ReActivity.time = new Timer();
+                            ReActivity.testtask = ReActivity.new TestTask();
+                            ReActivity.time.schedule(ReActivity.testtask, 1000, 2000);
     					}break;
-    					case 3: {
+    					case '4': {
                             if(ReActivity.paramspacktask != null){
                                 ReActivity.paramspacktask.cancel();
                             }

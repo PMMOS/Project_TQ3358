@@ -125,6 +125,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	protected static logInfo loginfo = new logInfo(); //data package uploaded
 	private static int[] warntypecnt = new int[10];
 	private static LinkedList<HashMap<String, String>> warnmsgbuf = new LinkedList<HashMap<String, String>>();
+	private static LinkedList<HashMap<String, String>> testmsgbuf = new LinkedList<HashMap<String, String>>();
 	private static boolean flag;
 	private static int cnt;	
 
@@ -135,6 +136,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	protected HeartpackTask heartpacktask;
 	protected ParamspackTask paramspacktask;
 	protected WarnpackTask warnpacktask;
+	protected TestTask testtask;
 
 	//gps
 	Location location;
@@ -506,6 +508,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		@Override
 		public void run() {
 			if (!warnmsgbuf.isEmpty()){
+				Log.d(LOG_TAG, warnmsgbuf.get(0).toString());
 				httpUtils.doPostAsyn(url, warnmsgbuf.get(0), new httpUtils.HttpCallBackListener() {
 	                @Override
 	                public void onFinish(String result) {
@@ -544,6 +547,32 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	        });
 		}
 	}
+
+	//test upload
+    public class TestTask extends TimerTask {
+    	@Override
+    	public void run(){
+			if(!testmsgbuf.isEmpty()){
+				Log.d(LOG_TAG, testmsgbuf.get(0).toString());
+				httpUtils.doPostAsyn(testurl, testmsgbuf.get(0), new httpUtils.HttpCallBackListener() {
+                    @Override//testurl
+                    public void onFinish(String result) {
+                   	Message message = new Message();
+                   		message.what = MESSAGE_TESTPACKAGE;
+                    	message.obj = result;
+                    	handler.sendMessage(message);
+                    	testmsgbuf.removeFirst();
+                    }
+
+                    @Override
+               	    public void onError(Exception e) {
+               	    	Log.e(LOG_TAG, "SEND FAILED");
+                    }
+		        });
+			}
+    		
+    	}
+    }
 
 	//gps update
 	private void updateLocation(Location location){
@@ -647,7 +676,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		    }
 		    
     	}
-    }	
+    }
 
     //serials handler
     Handler sehandler = new Handler(){
@@ -731,27 +760,16 @@ public class LedActivity extends Activity implements mPictureCallBack{
     					int picsid = cont.getInt("sid");
     					if(sidcnt < 3){
     						snapsid[sidcnt++] = String.valueOf(picsid);
-    					}else{
+    					}
+    					if(sidcnt == 3){
     						loginfo.snapshotSet(snapsid);
     						sidcnt = 0;
     						if(loginfo.typeflagGet() != null){
     							loginfo.haswarnSet("1");
     							loginfo.typeSet(loginfo.typeflagGet());
+    							Log.d(LOG_TAG, "typeflagGet"+loginfo.typeflagGet());
     							if(loginfo.typeflagGet().equals("0")){
-									Log.d(LOG_TAG, loginfo.logInfoGet().toString());
-									httpUtils.doPostAsyn(testurl, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
-					                    @Override
-					                    public void onFinish(String result) {
-					                   	Message message = new Message();
-					                   		message.what = MESSAGE_TESTPACKAGE;
-					                    	message.obj = result;
-					                    	handler.sendMessage(message);
-					                    }
-
-					                    @Override
-					               	    public void onError(Exception e) {
-					                    }
-							        });
+									testmsgbuf.add(loginfo.logInfoGet());
     							}else{
     								warnmsgbuf.add(loginfo.logInfoGet());
     							}
@@ -760,7 +778,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
     						//TODO trig capture end
     						mlocalcapture.setCapturePath(2);
     					}
-    					Log.d(LOG_TAG, String.valueOf(picsid));
+    					Log.d(LOG_TAG, String.valueOf(picsid)+"\t"+String.valueOf(sidcnt));
     				}catch(JSONException e){
     					e.printStackTrace();
     				}		

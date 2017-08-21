@@ -31,8 +31,10 @@ public class logInfo{
 	//haswarn=1 warntype=5 high speed//
 	//haswarn=1 warntype=6 stop drive//
 	//haswarn=1 warntype=7 exhausted drive
-	//haswarn=1 warntype=8 accident
-	//haswarn=1 warntype=9 overload
+	//haswarn=1 warntype=8 accelerate exception
+	//haswarn=1 warntype=9 decelerate exception
+	//haswarn=1 warntype=10 accident
+	//haswarn=1 warntype=11 overload
 	//capture sid
 	private String[] snapshot = new String[3];
 	private String typeflag;
@@ -47,6 +49,7 @@ public class logInfo{
 		fuelvol = "0";
 		distance = "0";
 		logtype = 0;
+		leakstatus = "128";
 	}
 
 	public void logtypeSet(int logtype){
@@ -155,7 +158,7 @@ public class logInfo{
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 			}
-			log_val.put("trucknumber", "3");
+			log_val.put("trucknumber", "22");
 			log_val.put("haswarn",haswarn);
 			log_val.put("speed",speed);
 			log_val.put("gpsx",gpsx);
@@ -178,7 +181,7 @@ public class logInfo{
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 			}
-			log_val.put("trucknumber", "3");
+			log_val.put("trucknumber", "22");
 			log_val.put("haswarn",haswarn);
 			log_val.put("speed",speed);
 			log_val.put("gpsx",gpsx);
