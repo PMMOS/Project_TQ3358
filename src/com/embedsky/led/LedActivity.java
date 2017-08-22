@@ -104,6 +104,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private final int MESSAGE_WARNPACKAGE = 0x103;
 	private final int MESSAGE_PARAMSPACKAGE = 0x104;
 	private final int MESSAGE_TESTPACKAGE = 0x105;
+	private final int MESSAGE_LOCKCMDOPERATE = 0x106;
 
 	//初始化led
 	public static native boolean ledInit();
@@ -124,7 +125,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private static HashMap<String, String> cidparams = new HashMap<String, String>(); 
 	protected static logInfo loginfo = new logInfo(); //data package uploaded
 	private static int[] warntypecnt = new int[10];
-	private static LinkedList<HashMap<String, String>> warnmsgbuf = new LinkedList<HashMap<String, String>>();
+	protected static LinkedList<HashMap<String, String>> warnmsgbuf = new LinkedList<HashMap<String, String>>();
 	private static LinkedList<HashMap<String, String>> testmsgbuf = new LinkedList<HashMap<String, String>>();
 	private static boolean flag;
 	private static int cnt;	
@@ -264,7 +265,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("trucknumber","22");
+			cidparams.put("trucknumber","川C8763");
 			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
@@ -386,11 +387,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
         }
 		
 		//timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
-		heartpacktask = new HeartpackTask();
-		warnpacktask = new WarnpackTask();
+		//heartpacktask = new HeartpackTask();
+		//warnpacktask = new WarnpackTask();
 		cansendtime.schedule(cansendtask, 1000, 5000);
-		time.schedule(heartpacktask, 5000, 60000);
-		time.schedule(warnpacktask, 6000, 20000);
+		//time.schedule(heartpacktask, 5000, 60000);
+		//time.schedule(warnpacktask, 6000, 20000);
 	}
 
 	@Override
@@ -591,55 +592,201 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		@Override
 		public void run(){
 			List<String> data = new ArrayList<String>();
+			LinkedList<Integer> siz = new LinkedList<Integer>();
 			int sum = 0x00;
+			int mystatus = 0x00;
+			int buflen = 0;
 			while(!Thread.currentThread().isInterrupted()){
 				int size;
+				String hv;
 				try{
 					byte[] buffer = new byte[64];
 					if (mInputStream == null) return;
 					size = mInputStream.read(buffer);
 					if(size > 0){
-						List<String> siz = new ArrayList<String> ();
 						for(int i=0; i<size;i++){
-							String s = Integer.toHexString(buffer[i]&0xFF);
-							if(s.length()<2){
-								siz.add("0"+s);
-							}else{
-								siz.add(s);
+							int s = buffer[i] & 0xFF;
+							siz.add(s);
+						}
+						//if(siz.size() > 11){
+						while(!siz.isEmpty()){
+							switch(mystatus){
+								case 0x00:
+									if(siz.get(0) == 0x80){
+										data.clear();
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										buflen = 0;
+										sum = 0x00;
+										mystatus = 0x01;
+									}
+									siz.removeFirst();
+									break;
+								case 0x01:
+									if(siz.get(0) == 0x05 || siz.get(0) == 0x07){
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										sum += siz.get(0);
+										mystatus = 0x02;
+										siz.removeFirst();
+									}else{
+										data.clear();
+										mystatus = 0x00;
+									}
+									break;
+								case 0x02:
+									if(siz.get(0) == 0x07){
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										sum += siz.get(0);
+										mystatus = 0x03;
+										buflen = siz.get(0);
+										siz.removeFirst();
+									}else{
+										data.clear();
+										mystatus = 0x00;
+									}
+									break;
+								case 0x03:
+									if(siz.get(0) == 0x02){//netId
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										sum += siz.get(0);
+										mystatus = 0x04;
+										buflen -= 1;
+										siz.removeFirst();
+									}else{
+										data.clear();
+										mystatus = 0x00;
+									}
+									break;
+								case 0x04:
+									if(siz.size() > 3){
+										for(int i = 0; i < 4; i++){
+											hv = Integer.toHexString(siz.get(i));
+											if(hv.length()<2){
+												data.add("0"+hv);
+											}else{
+												data.add(hv);
+											}
+											sum += siz.get(i);
+											buflen -= 1;
+										}
+										for(int i = 0; i < 4; i++){
+											siz.removeFirst();
+										}
+										mystatus = 0x05;
+									}else{
+										data.clear();
+										mystatus = 0x00;
+									}
+									break;
+								case 0x05:
+									hv = Integer.toHexString(siz.get(0));
+									if(hv.length()<2){
+										data.add("0"+hv);
+									}else{
+										data.add(hv);
+									}
+									sum += siz.get(0);
+									mystatus = 0x06;
+									buflen -= 1;
+									siz.removeFirst();
+									break;
+								case 0x06:
+									hv = Integer.toHexString(siz.get(0));
+									if(hv.length()<2){
+										data.add("0"+hv);
+									}else{
+										data.add(hv);
+									}
+									sum += siz.get(0);
+									buflen -= 1;
+									if(buflen == 0x00){
+										mystatus = 0x07;
+										siz.removeFirst();
+									}else{
+										data.clear();
+										mystatus = 0x00;
+									}
+									break;
+								case 0x07:
+									if((sum & 0xFF) == (siz.get(0) & 0xFF)){
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										mystatus = 0x08;
+										siz.removeFirst();
+									}else{
+										data.clear();
+										mystatus = 0x00;
+									}
+									break;
+								case 0x08:
+									if(siz.get(0) == 0x81){
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										Log.d(LOG_TAG, "send before"+data.toString());
+										ArrayList<String> datatemp = new ArrayList<String>();
+										for(int i = 0; i < data.size(); i++){
+											datatemp.add(data.get(i));
+										}
+										Message msg = new Message();
+										msg.what = 1;
+										msg.obj = datatemp;
+										sehandler.sendMessage(msg);
+										//data.clear();
+										siz.removeFirst();
+									}else{
+										data.clear();
+									}
+									mystatus = 0x00;
+									break;
+								default:
+									data.clear();
+									if(siz.get(0) == 0x80){
+										hv = Integer.toHexString(siz.get(0));
+										if(hv.length()<2){
+											data.add("0"+hv);
+										}else{
+											data.add(hv);
+										}
+										buflen = 0;
+										sum = 0x00;
+										mystatus = 0x01;
+										siz.removeFirst();
+									}else{
+										mystatus = 0x00;
+									}
+									break;
 							}
 						}
-						Log.d(LOG_TAG,String.valueOf(size)+" "+siz.toString());
-					}
-
-					if(size == 10){
-						data.clear();
-						for(int i = 1; i < size; i++){
-							String hv = Integer.toHexString(buffer[i] & 0xFF);
-							if(hv.length()<2){
-								data.add("0"+hv);
-							}else{
-								data.add(hv);
-							}
-							sum += buffer[i] & 0xFF;
-						}
-					}else if(size == 2){
-						//Log.d(LOG_TAG, "size 2"+"\t"+Integer.toHexString(buffer[0] & 0xFF)+"\t"+Integer.toHexString(sum & 0xFF));
-						if((sum & 0xFF) == (buffer[0] & 0xFF)){
-							//Log.d(LOG_TAG, data.toString());
-							Message msg = new Message();
-							msg.obj = data;
-							//TODO
-							sehandler.sendMessage(msg);
-							sum = 0;
-						}else{
-							data.clear();
-							sum = 0;
-							Log.e(LOG_TAG, "crc error");
-						}
-					}else{
-						data.clear();
-						sum = 0;
-						Log.e(LOG_TAG, "size error");
+							//siz.clear();
+						//}	
+						//Log.d(LOG_TAG,String.valueOf(size)+" "+siz.toString());
 					}
 
 				}catch (IOException e){
@@ -681,57 +828,83 @@ public class LedActivity extends Activity implements mPictureCallBack{
     //serials handler
     Handler sehandler = new Handler(){
     	@Override
-    	public void handleMessage(Message msg){
-    		ArrayList<String> data = (ArrayList<String>) msg.obj;
-    		//Log.d(LOG_TAG, data.toString());
-    		String flag = data.get(7);
-    		String devid = data.get(3)+data.get(4)+data.get(5)+data.get(6);
-    		if(flag.equals("00")){
-    			if(devid.equals("55667788")){	
-    				if(data.get(8).equals("00")){
-						lockstruct[0].setlockStatus("0");
-						tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
-					}else if(data.get(8).equals("01")){
-						lockstruct[0].setlockStatus("1");
-						tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
-					}
-					//TODO Compare status 
-					//warnflagSet and mlocalcapture.setCapturePath(0)
-				}
-				for(int i = 0 ; i < lockstruct.length; i++){
-					if(!lockstruct[i].getlockStatus().equals(lockstatustemp[i])){
-						lockwarncnt += 1 ;
-						break;
-					}
-					if( i == lockstruct.length-1) {
-						lockwarncnt = 0;
-					}
-				}
-				if(lockwarncnt > 3){
-					if(warntypecnt[1] < 2) {
-						loginfo.typeflagSet("1");
-						mlocalcapture.setCapturePath(0);
-						warntypecnt[1] += 1;
-					}
-				}
-				loginfo.lockSet(lockstruct);
-    		}else if(flag.equals("01")){
-    			if(devid.equals("55667788")){
-    				int leakstatusval = Integer.parseInt(data.get(8),16);
-    				loginfo.leakstatusSet(String.valueOf(leakstatusval));
-    				//TODO Compare leakstatus and send 
-    				if(leakstatusval < 64){
-    					if(warntypecnt[1] < 2){
-    						loginfo.haswarnSet("1");
-    						loginfo.typeSet("2");
-    						warnmsgbuf.add(loginfo.logInfoGet());
-    						warntypecnt[1] += 1;
-    					}
-    				}
-    			}
-    		}else if(flag.equals("02")){
+    	public void handleMessage(Message msg){	
+    		if(msg.what == 1) {
+    			ArrayList<String> data = (ArrayList<String>) msg.obj;
+	    		Log.d(LOG_TAG, "message get" + data.toString());
+	    		String flag = data.get(8);
+	    		String devid = data.get(4)+data.get(5)+data.get(6)+data.get(7);
+	    		if(flag.equals("00")){
+	    			if(devid.equals("55667788")){	
+	    				if(data.get(9).equals("00")){
+							lockstruct[0].setlockStatus("0");
+							tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
+						}else if(data.get(9).equals("01")){
+							lockstruct[0].setlockStatus("1");
+							tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
+						}
+						//TODO Compare status 
+						//warnflagSet and mlocalcapture.setCapturePath(0)
+						//operate success or failed
+						if(data.get(1).equals("05")){
+							if(lockstruct[0].getlockStatus().equals(lockstatustemp[0])){
+								app.reparams.put("operate", "1");
+							}else{
+								app.reparams.put("operate", "0");
+							}
+							httpUtils.doPostAsyn(app.url, app.reparams, new httpUtils.HttpCallBackListener() {
+					            @Override
+					            public void onFinish(String result) {
+					                Message message = new Message();
+					                message.what = MESSAGE_LOCKCMDOPERATE;
+					                message.obj=result;
+					                handler.sendMessage(message);
+					            }
 
-    		}	
+					            @Override
+					            public void onError(Exception e) {
+					            }
+
+						    });
+						}
+					}
+					loginfo.lockSet(lockstruct);
+					for(int i = 0 ; i < lockstruct.length; i++){
+						if(!lockstruct[i].getlockStatus().equals(lockstatustemp[i])){
+							lockwarncnt += 1 ;
+							break;
+						}
+						if( i == lockstruct.length-1) {
+							lockwarncnt = 0;
+						}
+					}
+					if(lockwarncnt > 10){
+						if(warntypecnt[1] < 1) {
+							loginfo.typeflagSet("1");
+							mlocalcapture.setCapturePath(0);
+							warntypecnt[1] += 1;
+						}
+					}
+					
+	    		}else if(flag.equals("01")){
+	    			if(devid.equals("55667788")){
+	    				int leakstatusval = Integer.parseInt(data.get(9),16);
+	    				loginfo.leakstatusSet(String.valueOf(leakstatusval));
+	    				//TODO Compare leakstatus and send 
+	    				if(leakstatusval > 64){
+	    					if(warntypecnt[1] < 1){
+	    						loginfo.haswarnSet("1");
+	    						loginfo.typeSet("2");
+	    						warnmsgbuf.add(loginfo.logInfoGet());
+	    						warntypecnt[1] += 1;
+	    					}
+	    				}
+	    			}
+	    		}else if(flag.equals("02")){
+
+	    		}	
+    		}
+    		
     	}
     };	
 	
@@ -765,17 +938,20 @@ public class LedActivity extends Activity implements mPictureCallBack{
     						loginfo.snapshotSet(snapsid);
     						sidcnt = 0;
     						if(loginfo.typeflagGet() != null){
-    							loginfo.haswarnSet("1");
-    							loginfo.typeSet(loginfo.typeflagGet());
     							Log.d(LOG_TAG, "typeflagGet"+loginfo.typeflagGet());
     							if(loginfo.typeflagGet().equals("0")){
+    								loginfo.haswarnSet("1");
+    								loginfo.typeSet("1");
 									testmsgbuf.add(loginfo.logInfoGet());
     							}else{
+    								loginfo.haswarnSet("1");
+    								loginfo.typeSet(loginfo.typeflagGet());
     								warnmsgbuf.add(loginfo.logInfoGet());
     							}
     							loginfo.typeflagSet(null);
+    							
     						}
-    						//TODO trig capture end
+    						//TODO trig capture end and delete the capture file
     						mlocalcapture.setCapturePath(2);
     					}
     					Log.d(LOG_TAG, String.valueOf(picsid)+"\t"+String.valueOf(sidcnt));
@@ -796,6 +972,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
     				Log.d(LOG_TAG, s);
     			}break;
     			case MESSAGE_TESTPACKAGE: {
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, s);
+    			}break;
+    			case MESSAGE_LOCKCMDOPERATE: {
     				String s =(String) msg.obj;
     				Log.d(LOG_TAG, s);
     			}break;
@@ -825,7 +1005,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					}
 					loginfo.tireSet(tirepressure);
 					if(tLogView != null){
-						Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
+						//Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 						//tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
 					//TODO Compare the tirevalue and tiretemperature
@@ -888,7 +1068,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  loginfo.fuelvolSet(fuelLevel);
 							  //TODO To Compare the fuellevel and send
 							  if(fuelLevel - fuelleveltemp > 1){
-							  	if(warntypecnt[4] < 2 ) {
+							  	if(warntypecnt[4] < 1 ) {
 							  		loginfo.typeflagSet("4");
 							  		mlocalcapture.setCapturePath(0);
 							  		warntypecnt[4] += 1 ;
@@ -904,7 +1084,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				}else{
 					if(tLogView != null){
 						//tLogView.append(Long.toHexString(id)+"\n");
-						Log.d(LOG_TAG, Long.toHexString(id)+"\n");
+						//Log.d(LOG_TAG, Long.toHexString(id)+"\n");
 					}
 				}
 				

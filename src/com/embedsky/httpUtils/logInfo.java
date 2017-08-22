@@ -8,7 +8,7 @@ import org.json.JSONObject;
 import org.json.JSONException;
 
 public class logInfo{
-	private static final String LOG_TAG = "loginfo";
+	private static final String LOG_TAG = "lock";
 
 	private int logtype;
 
@@ -58,12 +58,12 @@ public class logInfo{
 	
 	public void lockSet(lockStruct[] lockstruct){
 		lock_val = new String();
-		if(!warntype.equals("1")){
+		//if(!warntype.equals("1")){
 			for(int i=0; i<lockstruct.length;i++){
 				lock_val += lockstruct[i].getlockStatus()+"-";
 			}
 			lock_val = lock_val.substring(0, lock_val.length()-1);
-		}
+		//}
 	}
 
 	public void tireSet(tirePressure[] tirepressure){
@@ -158,7 +158,7 @@ public class logInfo{
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 			}
-			log_val.put("trucknumber", "22");
+			log_val.put("trucknumber", "川C8763");
 			log_val.put("haswarn",haswarn);
 			log_val.put("speed",speed);
 			log_val.put("gpsx",gpsx);
@@ -173,6 +173,7 @@ public class logInfo{
 		}else if(logtype == 1){ //thread2 test get all the message including snapshot
 			log_val.put("warntype",warntype);
 			log_val.put("lock",lock_val);
+			Log.d(LOG_TAG, haswarn+ "\t"+warntype);
 			log_val.put("leakstatus", leakstatus);
 			for(int i = 0; i < 3; i++){
 				log_val.put("snapshot"+String.valueOf(i), snapshot[i]);
@@ -181,7 +182,7 @@ public class logInfo{
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 			}
-			log_val.put("trucknumber", "22");
+			log_val.put("trucknumber", "川C8763");
 			log_val.put("haswarn",haswarn);
 			log_val.put("speed",speed);
 			log_val.put("gpsx",gpsx);
