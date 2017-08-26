@@ -33,10 +33,12 @@ public class ReGetuiApplication extends Application {
 	
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
 	protected String url="http://120.76.219.196:85/lock/operate";
+
 	private static String sid = new String();
 	private static String type = new String();
 	private static String operate = new String();
-	public static int modeselect;
+	public static int wirelessflag = 0;
+    public static int lockoperateflag = 0;
 	
 	protected static HashMap<String, String> reparams = new HashMap<String, String>();
 		
@@ -68,7 +70,9 @@ public class ReGetuiApplication extends Application {
                             if(ReActivity.heartpacktask != null){
                                 ReActivity.heartpacktask.cancel();
                             }
-                            
+                            if(ReActivity.warnpacktask != null){
+                                ReActivity.warnpacktask.cancel();
+                            }
     						if(ReActivity.time != null){
     							ReActivity.time.cancel();
     						}
@@ -76,7 +80,9 @@ public class ReGetuiApplication extends Application {
                             ReActivity.warnmsgbuf.clear();
     						ReActivity.time = new Timer();
                             ReActivity.heartpacktask = ReActivity.new HeartpackTask();
+                            ReActivity.warnpacktask = ReActivity.new WarnpackTask();
     						ReActivity.time.schedule(ReActivity.heartpacktask, 5000, 60000);
+                            ReActivity.time.schedule(ReActivity.warnpacktask, 6000, 20000);
                             
     					}break;
                         case 2: {
@@ -90,70 +96,83 @@ public class ReGetuiApplication extends Application {
                                 ReActivity.time.cancel();
                             }
                         }break;
-                        case 8:
-                            //TODO open the lockstatus and leakstatus get
-                            if(ReActivity.time != null){
-                                if(ReActivity.warnpacktask != null){
-                                    ReActivity.warnpacktask.cancel();
-                                }
-                                ReActivity.warnpacktask = ReActivity.new WarnpackTask();
-                                ReActivity.time.schedule(ReActivity.warnpacktask, 6000, 20000);
+                        case 8: {
+                            //TODO close the lock   
+                            wirelessflag = 1;
+                            try{
+                                ReActivity.ch340AndroidDriver.WriteData(packdata("55 66 77 88", "01"), 
+                                                    packdata("55 66 77 88", "01").length);
+                                ReActivity.lockstatustemp[0] = "1";
+                                // for(int i = 0; i < 5; i++){
+                                //     ReActivity.lockstatustemp[i] = "1";
+                                // }
+                            }catch (IOException e){
+                                e.printStackTrace();
                             }
-                        break;
-                        case 9:
-                            //TODO  close the lockstatus and leakstatus get
-                            if(ReActivity.warnpacktask != null){
-                                ReActivity.warnpacktask.cancel();
+                        }break;
+                        case 9: {
+                            //TODO  close the lock
+                            wirelessflag = 0;
+                            try{
+                                ReActivity.ch340AndroidDriver.WriteData(packdata("55 66 77 88", "01"), 
+                                                    packdata("55 66 77 88", "01").length);
+                                ReActivity.lockstatustemp[0] = "1";
+                                // for(int i = 0; i < 5; i++){
+                                //     ReActivity.lockstatustemp[i] = "1";
+                                // }
+                            }catch (IOException e){
+                                e.printStackTrace();
                             }
-                        break;
+                        }break;
     					case 11: {
                             sid = command.getString("sid");
     						operate = command.getString("operate");
+                            lockoperateflag = 1;
     						if(operate.equals("0")){
 		        				//temp = true;
-		        				temp = ReActivity.ledSetOn(1);
+		        				//temp = ReActivity.ledSetOn(1);
 		        				try{
-		        					ReActivity.mOutputStream.write(packdata("55 66 77 88", "00"));
-		        					ReActivity.mOutputStream.write('\n');
+		        					ReActivity.ch340AndroidDriver.WriteData(packdata("55 66 77 88", "00"), 
+                                                    packdata("55 66 77 88", "00").length);
                                     ReActivity.lockstatustemp[0] = "0";
                                     // for(int i = 0; i < 3; i++){
                                     //     ReActivity.lockstatustemp[i] = "0";
                                     // }
 		        				}catch (IOException e){
-		        					temp = false;
+		        					//temp = false;
 		        					e.printStackTrace();
 		        				}
 		        				
 	        				}else if(operate.equals("1")){
 			        			//temp = true;
-			        			temp = ReActivity.ledSetOff(1);
+			        			//temp = ReActivity.ledSetOff(1);
 			        			try{
-		        					ReActivity.mOutputStream.write(packdata("55 66 77 88", "01"));
-		        					ReActivity.mOutputStream.write('\n');
+		        					ReActivity.ch340AndroidDriver.WriteData(packdata("55 66 77 88", "01"), 
+                                                    packdata("55 66 77 88", "01").length);
                                     ReActivity.lockstatustemp[0] = "1";
                                     // for(int i = 0; i < 3; i++){
                                     //     ReActivity.lockstatustemp[i] = "1";
                                     // }
 		        				}catch (IOException e){
-		        					temp = false;
+		        					//temp = false;
 		        					e.printStackTrace();
 		        				}
 			        		}else if(operate.equals("2")){
 			        			//temp = true;
-			        			temp = ReActivity.ledSetOn(2);
+			        			//temp = ReActivity.ledSetOn(2);
 			        			//ReActivity.mOutputStream.write();
                                 // for(int i = 3; i < 5; i++){
                                 //     ReActivity.lockstatustemp[i] = "0";
                                 // }
 			        		}else if(operate.equals("3")){
 			        			//temp = true;
-			        			temp = ReActivity.ledSetOff(2);
+			        			//temp = ReActivity.ledSetOff(2);
 			        			//ReActivity.mOutputStream.write();
                                 // for(int i = 3; i < 5; i++){
                                 //     ReActivity.lockstatustemp[i] = "1";
                                 // }
 			        		}
-			        		int ope = temp?1:0;
+			        		//int ope = temp?1:0;
 			    			reparams.put("sid", sid);
 			    			//reparams.put("type", type);
 			    			//reparams.put("operate", String.valueOf(ope));

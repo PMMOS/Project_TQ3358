@@ -11,6 +11,7 @@ public class logInfo{
 	private static final String LOG_TAG = "lock";
 
 	private int logtype;
+	private String trucknumber;
 
 	//haswarn=0 warntype=null heartpackages
 	private String gpsx;
@@ -41,6 +42,7 @@ public class logInfo{
 	
 	public logInfo(){
 		super();
+		trucknumber = "川C1234";
 		haswarn = "0";
 		warntype = "0";
 		speed = "0";
@@ -50,6 +52,10 @@ public class logInfo{
 		distance = "0";
 		logtype = 0;
 		leakstatus = "128";
+	}
+
+	public void trucknumberSet(String trucknumber){
+		this.trucknumber = trucknumber;
 	}
 
 	public void logtypeSet(int logtype){
@@ -158,7 +164,7 @@ public class logInfo{
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 			}
-			log_val.put("trucknumber", "川C8763");
+			log_val.put("trucknumber", trucknumber);
 			log_val.put("haswarn",haswarn);
 			log_val.put("speed",speed);
 			log_val.put("gpsx",gpsx);
@@ -182,7 +188,7 @@ public class logInfo{
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
 			}
-			log_val.put("trucknumber", "川C8763");
+			log_val.put("trucknumber", trucknumber);
 			log_val.put("haswarn",haswarn);
 			log_val.put("speed",speed);
 			log_val.put("gpsx",gpsx);

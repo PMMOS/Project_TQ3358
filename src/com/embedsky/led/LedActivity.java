@@ -9,8 +9,7 @@ import com.embedsky.httpUtils.tirePressure;
 import com.interfaces.mLocalCaptureCallBack;
 import com.interfaces.mPictureCallBack;
 
-import com.embedsky.serialport.SerialPort;
-import com.embedsky.serialport.SerialPortFinder;
+import com.embedsky.serialport.CH340AndroidDriver;
 
 import com.embedsky.xmVideo.DeviceLoginFragment;
 import com.embedsky.xmVideo.OnscreenPlayFragment;
@@ -56,11 +55,16 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection; 
 import android.content.SharedPreferences;
+
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 
 import android.location.Criteria;
 import android.location.Location;
@@ -83,7 +87,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
-//import android.widget.Toast;
+import android.widget.Toast;
 
 import com.igexin.sdk.PushManager;
 
@@ -105,6 +109,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private final int MESSAGE_PARAMSPACKAGE = 0x104;
 	private final int MESSAGE_TESTPACKAGE = 0x105;
 	private final int MESSAGE_LOCKCMDOPERATE = 0x106;
+	private final int MESSAGE_USB_INSERT = 0x107;
+	private final int MESSAGE_USB_UNINSERT = 0x108;
 
 	//初始化led
 	public static native boolean ledInit();
@@ -166,9 +172,14 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private static int sidcnt;
 	
 	//serials
-	protected SerialPort mSerialPort;
-	protected OutputStream mOutputStream;
-	private InputStream mInputStream;
+	private static final String ACTION_USB_PERMISSION = "com.embedsky.USB_PERMISSION";
+	protected CH340AndroidDriver ch340AndroidDriver;
+	private final int baurt = 4800;
+	private final int BUF_SIZE = 64;
+	private final int LEN = 64;
+	//protected SerialPort mSerialPort;
+	//protected OutputStream mOutputStream;
+	//private InputStream mInputStream;
 	private ReadThread mReadThread;
 	private ReGetuiApplication app;//get packdata methods
 	private static lockStruct[] lockstruct = new lockStruct[5];
@@ -249,12 +260,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		});
 
 		// lock初始化
-		if (!ledInit()) {
-			new AlertDialog.Builder(this).setTitle("init lock fail").show();
+		//if (!ledInit()) {
+			//new AlertDialog.Builder(this).setTitle("init lock fail").show();
 			//lock初始化失败，则使控件不可点击
-			for (int i = 0; i < 2; i++)
-				cb[i].setEnabled(false);
-		}
+			//for (int i = 0; i < 2; i++)
+				//cb[i].setEnabled(false);
+		//}
 		
 		cnt = 0;
 		
@@ -262,10 +273,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		PushManager.getInstance().initialize(this.getApplicationContext(),GetuiPushService.class);
 		PushManager.getInstance().registerPushIntentService(this.getApplicationContext(),ReIntentService.class);
 		String cid = PushManager.getInstance().getClientid(this.getApplicationContext());
-		
+		//String cid = new String();
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("trucknumber","川C8763");
+			cidparams.put("trucknumber","川C1234");
 			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
@@ -286,21 +297,19 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		}
 
 		//serials initial
-		File fSerials = new File(File.separator+"dev"+File.separator+"ttySAC2");
-		if(fSerials.exists()){
-			try{
-				mSerialPort = new SerialPort(fSerials, 4800);
-				mOutputStream = mSerialPort.getOutputStream();
-				mInputStream = mSerialPort.getInputStream();
-			} catch (SecurityException e) {
-			
-			} catch (IOException e) {
-			
-			} catch (InvalidParameterException e) {
-			
-			}	
-		}else{
-			Log.e(LOG_TAG, "file not found");
+		registerReceiver(mUsbDeviceReceiver, new IntentFilter(
+				UsbManager.ACTION_USB_DEVICE_ATTACHED));
+		registerReceiver(mUsbDeviceReceiver, new IntentFilter(
+				UsbManager.ACTION_USB_DEVICE_DETACHED));
+		ch340AndroidDriver = new CH340AndroidDriver(
+				(UsbManager) getSystemService(Context.USB_SERVICE), this,
+				ACTION_USB_PERMISSION);
+		//initUSB();
+		Intent i = getIntent();
+		String action = i.getAction();
+		if (action.equals("android.hardware.usb.action.USB_DEVICE_ATTACHED")) {
+			Log.d(LOG_TAG, "init USB");
+			initUSB();
 		}
 		lockwarncnt = 0;
 		
@@ -362,7 +371,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
         sidcnt = 0;
         FunSupport.getInstance().init(context);
         SharedPreferences sharedPreferences = getSharedPreferences(SPNames.UserInfo.getValue(), Context.MODE_PRIVATE);
-        File f = new File("root"+File.separator+"mnt");
+        File f = new File(File.separator+"mnt");
         if(!f.exists()){
         //if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
         	Utils.showToast(context,"no SD card");
@@ -370,7 +379,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
         }else{
         	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), true).commit();
         	sharedPreferences.edit().putString(UserInfoItems.localPath.getValue(), 
-        		"root"+File.separator+"mnt"+File.separator+"xmlocal"+File.separator).commit();
+        		File.separator+"mnt"+File.separator+"xmlocal"+File.separator).commit();
         		//Environment.getExternalStorageDirectory().toString()+File.separator+"xmlocal"+File.separator).commit();
         }
         if(findViewById(R.id.fragment_video) != null){
@@ -394,6 +403,27 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		//time.schedule(warnpacktask, 6000, 20000);
 	}
 
+	//init USB to serials
+	private void initUSB() {
+		UsbDevice device = ch340AndroidDriver.EnumerateDevice();// 枚举设备，获取USB设备
+		ch340AndroidDriver.OpenDevice(device);// 打开并连接USB
+		if (ch340AndroidDriver.isConnected()) {
+			boolean flags = ch340AndroidDriver.UartInit();// 初始化串口
+			if (!flags) {
+				Log.e(LOG_TAG, "Init Uart Error");
+				/*Toast.makeText(LedActivity.this, "Init Uart Error",
+						Toast.LENGTH_SHORT).show();*/
+			} else {// 配置串口
+				if (ch340AndroidDriver.SetConfig(baurt, (byte) 8, (byte) 1,
+						(byte) 0, (byte) 0)) {
+					Log.e(LOG_TAG, "Uart Configed");
+				}
+			}
+		} else {
+			Log.e(LOG_TAG, "ch340AndroidDriver not connected");
+		}
+	}
+
 	@Override
 	public void onAttachFragment(Fragment fragment){
 		try{
@@ -415,12 +445,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				BASE64Decoder base64decoder = new BASE64Decoder();
 				try{
 					byte[] buf = new byte[inputfile.available()];
-					Log.d(LOG_TAG, String.valueOf(inputfile.available()));
+					//Log.d(LOG_TAG, String.valueOf(inputfile.available()));
 					inputfile.read(buf);
 					inputfile.close();
 					String picdata = base64encoder.encode(buf);
-					Log.d(LOG_TAG,"encode success");
-					Log.d(LOG_TAG, String.valueOf(picdata.length()));
+					//Log.d(LOG_TAG,"encode success");
+					//Log.d(LOG_TAG, String.valueOf(picdata.length()));
 					picUpload picupload = new picUpload(picdata, "png");
 					byte[] outbuffer = picdata.getBytes();
 					//Log.d(LOG_TAG,String.valueOf(outbuffer.length));
@@ -487,8 +517,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					warntypecnt[i] = 0;
 				}
 			}
-			Log.d(LOG_TAG, loginfo.logInfoGet().toString());
-			httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+			HashMap<String, String> tem = loginfo.logInfoGet();
+			Log.d(LOG_TAG, tem.toString());
+			httpUtils.doPostAsyn(url, tem, new httpUtils.HttpCallBackListener() {
                 @Override
                 public void onFinish(String result) {
                	Message message = new Message();
@@ -597,12 +628,17 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			int mystatus = 0x00;
 			int buflen = 0;
 			while(!Thread.currentThread().isInterrupted()){
+				try{
+					Thread.sleep(50);
+				}catch(InterruptedException e){
+					e.printStackTrace();
+				}
 				int size;
 				String hv;
-				try{
+				//try{
 					byte[] buffer = new byte[64];
-					if (mInputStream == null) return;
-					size = mInputStream.read(buffer);
+					if (ch340AndroidDriver == null) return;
+					size = ch340AndroidDriver.ReadData(buffer, LEN);
 					if(size > 0){
 						for(int i=0; i<size;i++){
 							int s = buffer[i] & 0xFF;
@@ -789,10 +825,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						//Log.d(LOG_TAG,String.valueOf(size)+" "+siz.toString());
 					}
 
-				}catch (IOException e){
+				/*}catch (IOException e){
 					e.printStackTrace();
 					return;
-				}
+				}*/
 			}
 		}
 	}
@@ -831,10 +867,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
     	public void handleMessage(Message msg){	
     		if(msg.what == 1) {
     			ArrayList<String> data = (ArrayList<String>) msg.obj;
-	    		Log.d(LOG_TAG, "message get" + data.toString());
+	    		Log.d(LOG_TAG, data.toString());
 	    		String flag = data.get(8);
 	    		String devid = data.get(4)+data.get(5)+data.get(6)+data.get(7);
-	    		if(flag.equals("00")){
+	    		if(flag.equals("00") && (!data.get(1).equals("05"))){
 	    			if(devid.equals("55667788")){	
 	    				if(data.get(9).equals("00")){
 							lockstruct[0].setlockStatus("0");
@@ -843,31 +879,26 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							lockstruct[0].setlockStatus("1");
 							tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
 						}
-						//TODO Compare status 
-						//warnflagSet and mlocalcapture.setCapturePath(0)
-						//operate success or failed
-						if(data.get(1).equals("05")){
-							if(lockstruct[0].getlockStatus().equals(lockstatustemp[0])){
-								app.reparams.put("operate", "1");
-							}else{
-								app.reparams.put("operate", "0");
-							}
-							httpUtils.doPostAsyn(app.url, app.reparams, new httpUtils.HttpCallBackListener() {
-					            @Override
-					            public void onFinish(String result) {
-					                Message message = new Message();
-					                message.what = MESSAGE_LOCKCMDOPERATE;
-					                message.obj=result;
-					                handler.sendMessage(message);
-					            }
-
-					            @Override
-					            public void onError(Exception e) {
-					            }
-
-						    });
+					}else if(devid.equals("55667789")){
+						if(data.get(9).equals("00")){
+							lockstruct[3].setlockStatus("0");
+							tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
+						}else if(data.get(9).equals("01")){
+							lockstruct[3].setlockStatus("1");
+							tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
+						}
+					}else if(devid.equals("55667790")){
+						if(data.get(9).equals("00")){
+							lockstruct[4].setlockStatus("0");
+							tx[4].setText("lock"+lockstruct[4].getlockName()+"\t\t"+lockstruct[4].getlockStatus());
+						}else if(data.get(9).equals("01")){
+							lockstruct[4].setlockStatus("1");
+							tx[4].setText("lock"+lockstruct[4].getlockName()+"\t\t"+lockstruct[4].getlockStatus());
 						}
 					}
+					//TODO Compare status 
+					//warnflagSet and mlocalcapture.setCapturePath(0)
+					//operate success or failed
 					loginfo.lockSet(lockstruct);
 					for(int i = 0 ; i < lockstruct.length; i++){
 						if(!lockstruct[i].getlockStatus().equals(lockstatustemp[i])){
@@ -878,20 +909,46 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							lockwarncnt = 0;
 						}
 					}
-					if(lockwarncnt > 10){
-						if(warntypecnt[1] < 1) {
-							loginfo.typeflagSet("1");
-							mlocalcapture.setCapturePath(0);
-							warntypecnt[1] += 1;
+					if(app.lockoperateflag == 0){
+						if(lockwarncnt > 20 && app.wirelessflag == 1){
+							if(warntypecnt[1] < 1) {
+								loginfo.typeflagSet("1");
+								mlocalcapture.setCapturePath(0);
+								warntypecnt[1] += 1;
+							}
+							lockwarncnt = 20;
 						}
+					}else{
+						if(lockwarncnt > 20) {
+							app.reparams.put("operate", "1"); //operate failed
+							lockwarncnt = 0;
+						}else{
+							app.reparams.put("operate", "0"); //operate success
+						}
+						Log.d(LOG_TAG, app.reparams.toString());
+						httpUtils.doPostAsyn(app.url, app.reparams, new httpUtils.HttpCallBackListener() {
+				            @Override
+				            public void onFinish(String result) {
+				                Message message = new Message();
+				                message.what = MESSAGE_LOCKCMDOPERATE;
+				                message.obj=result;
+				                handler.sendMessage(message);  
+				            }
+
+				            @Override
+				            public void onError(Exception e) {
+				            }
+
+					    });
+					    app.lockoperateflag = 0;
 					}
 					
 	    		}else if(flag.equals("01")){
-	    			if(devid.equals("55667788")){
+	    			//if(devid.equals("55667788")){
 	    				int leakstatusval = Integer.parseInt(data.get(9),16);
 	    				loginfo.leakstatusSet(String.valueOf(leakstatusval));
 	    				//TODO Compare leakstatus and send 
-	    				if(leakstatusval > 64){
+	    				if(leakstatusval > 64 && app.wirelessflag == 1){
 	    					if(warntypecnt[1] < 1){
 	    						loginfo.haswarnSet("1");
 	    						loginfo.typeSet("2");
@@ -899,7 +956,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    						warntypecnt[1] += 1;
 	    					}
 	    				}
-	    			}
+	    			//}
 	    		}else if(flag.equals("02")){
 
 	    		}	
@@ -979,6 +1036,14 @@ public class LedActivity extends Activity implements mPictureCallBack{
     				String s =(String) msg.obj;
     				Log.d(LOG_TAG, s);
     			}break;
+    			case MESSAGE_USB_INSERT: {
+    				initUSB();
+    				Log.d(LOG_TAG, "initUSB");
+    			}break;
+    			case MESSAGE_USB_UNINSERT: {
+    				ch340AndroidDriver.CloseDevice();
+    				Log.d(LOG_TAG, "CloseDevice");
+    			}break;
     			default: break;
     		}
     	}
@@ -995,17 +1060,18 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					ArrayList<Integer> res =(ArrayList<Integer>) msg.obj;
 					//Log.d(LOG_TAG, res.toString());
 					int tirepos = res.get(0);
-					int tirepre = res.get(1)*8;
-					double tiretem = ((int)res.get(2)*256+(int)res.get(3))*0.03125-273;
+					double tirepre = ((int)res.get(1))*8*0.001;
+					double tiretem = (((int)res.get(2)*256+(int)res.get(3))*0.03125-273)*0.1;
 					double tirev = ((int)res.get(5)*256+(int)res.get(6))*0.1;
 					int tiretype = res.get(7) >> 5;
 					if(tirepos < tirepressure.length){
-						tirepressure[tirepos].settireVal(String.valueOf(tirepre));
+						tirepressure[tirepos].settireVal(String.format("%.3f",tirepre));
 						tirepressure[tirepos].settireTempVal(String.format("%.2f", tiretem));
 					}
 					loginfo.tireSet(tirepressure);
 					if(tLogView != null){
-						//Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
+						// Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+String.format("%.3f",tirepre)+"kPa "+String.format("%.2f", tiretem)
+						// 	+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 						//tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
 					//TODO Compare the tirevalue and tiretemperature
@@ -1064,6 +1130,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  if(tLogView != null){
 								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
 							  }
+							  break;
 						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
 							  loginfo.fuelvolSet(fuelLevel);
 							  //TODO To Compare the fuellevel and send
@@ -1091,6 +1158,33 @@ public class LedActivity extends Activity implements mPictureCallBack{
             }
         }
     }
+
+    private final BroadcastReceiver mUsbDeviceReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			String action = intent.getAction();
+			//Toast.makeText(LedActivity.this, action, Toast.LENGTH_LONG).show();
+			Log.e(LOG_TAG, "action:" + action);
+			if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+				UsbDevice deviceFound = (UsbDevice) intent
+						.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+				Toast.makeText(
+						LedActivity.this,
+						"ACTION_USB_DEVICE_ATTACHED: \n"
+								+ deviceFound.toString(), Toast.LENGTH_LONG)
+						.show();
+				handler.sendEmptyMessage(MESSAGE_USB_INSERT);
+			} else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+				UsbDevice device = (UsbDevice) intent
+						.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+				Toast.makeText(LedActivity.this,
+						"ACTION_USB_DEVICE_DETACHED: \n" + device.toString(),
+						Toast.LENGTH_LONG).show();
+				handler.sendEmptyMessage(MESSAGE_USB_UNINSERT);
+			}
+		}
+
+	};
 
 	/*
 	@Override
@@ -1162,6 +1256,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
     @Override
     protected void onDestroy(){
     	fdu.OnDestory();
+    	ch340AndroidDriver.CloseDevice();
+    	unregisterReceiver(mUsbDeviceReceiver);
     	super.onDestroy();
     }
 
@@ -1177,8 +1273,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				if(cb[0].isChecked()){
 					//mlocalcapture.setCapturePath(0);
 					loginfo.speedSet(20);
-					Log.d(LOG_TAG, loginfo.logInfoGet().toString());
-					httpUtils.doPostAsyn(url, loginfo.logInfoGet(), new httpUtils.HttpCallBackListener() {
+					HashMap<String, String> tem = loginfo.logInfoGet();
+					Log.d(LOG_TAG, tem.toString());
+					httpUtils.doPostAsyn(url, tem, new httpUtils.HttpCallBackListener() {
                     @Override
                     public void onFinish(String result) {
                    	Message message = new Message();
@@ -1197,8 +1294,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			}else if(v == cb[1]){
 				if(cb[1].isChecked()){
 					try{
-						mOutputStream.write(app.packdata("55 66 77 88", "00"));
-						mOutputStream.write('\n');
+						ch340AndroidDriver.WriteData(app.packdata("55 66 77 88", "00"), app.packdata("55 66 77 88", "00").length);
+						//mOutputStream.write(app.packdata("55 66 77 88", "00"));
+						//mOutputStream.write('\n');
 					} catch (IOException e){
 						e.printStackTrace();
 						Log.e(LOG_TAG,"send failed");
@@ -1207,8 +1305,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					//mlocalcapture.setCapturePath(2);
 				}else{
 					try{
-						mOutputStream.write(app.packdata("55 66 77 88", "01"));
-						mOutputStream.write('\n');
+						ch340AndroidDriver.WriteData(app.packdata("55 66 77 88", "01"), app.packdata("55 66 77 88", "01").length);
+						//mOutputStream.write(app.packdata("55 66 77 88", "01"));
+						//mOutputStream.write('\n');
 					} catch (IOException e){
 						e.printStackTrace();
 						Log.e(LOG_TAG,"send failed");

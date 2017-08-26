@@ -8,7 +8,10 @@
     <uses-sdk 
         android:minSdkVersion="10" 
         android:targetSdkVersion="22"/>
+
+    <uses-feature android:name="android.hardware.usb.host" />
     
+    <uses-permission android:name="android.hardware.usb.host" />
     <uses-permission android:name="android.permission.HARDWARE_TEST" />
     
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -54,13 +57,21 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+            	<action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+
+            <meta-data
+            	android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" 
+            	android:resource="@xml/device_filter" />
+
         </activity>
 
         <service android:name="com.android.server.MycanService" android:process=":remote">
         	<intent-filter>
                 	<action android:name="android.os.IMycanService" />
         	</intent-filter>
-	</service>
+		</service>
 
         <!-- 个推SDK配置开始 -->
         <!-- 配置的第三方方参数属性 -->
