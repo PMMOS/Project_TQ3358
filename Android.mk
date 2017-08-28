@@ -8,7 +8,8 @@ LOCAL_SRC_FILES := $(call all-subdir-java-files)
 LOCAL_PACKAGE_NAME := Led
 LOCAL_CERTIFICATE := platform
 
-LOCAL_STATIC_JAVA_LIBRARIES := android-support-v4 GetuiSDK2.10.2.0 commons-lang-2.5 Core LibFunSDK stickygridheaders dewarp sun.misc.BASE64Decoder BASE64
+LOCAL_STATIC_JAVA_LIBRARIES := android-support-v4 GetuiSDK2.10.2.0 commons-lang-2.5 Core LibFunSDK stickygridheaders sun.misc.BASE64Decoder BASE64 dewarp 
+
 LOCAL_JNI_SHARED_LIBRARIES := libgetuiext2 libFunSDK libeznat libh264tomp4
 
 #LOCAL_PROGUARD_ENABLED := disabled
@@ -21,11 +22,11 @@ LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := android-support-v4:libs/android-support-
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := GetuiSDK2.10.2.0:libs/GetuiSDK2.10.2.0.jar 
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := commons-lang-2.5:libs/commons-lang-2.5.jar 
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := Core:libs/Core.jar 
-LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := dewarp:libs/dewarp.jar 
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := LibFunSDK:libs/LibFunSDK.jar
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := stickygridheaders:libs/stickygridheaders.jar
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := sun.misc.BASE64Decoder:libs/sun.misc.BASE64Decoder.jar
 LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := BASE64:libs/BASE64.jar
+LOCAL_PREBUILT_STATIC_JAVA_LIBRARIES := dewarp:libs/dewarp.jar 
 include $(BUILD_MULTI_PREBUILT)
 
 include $(CLEAR_VARS)

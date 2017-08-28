@@ -190,6 +190,7 @@ public class ReGetuiApplication extends Application {
     						//TODO All message send and captureImg
                             ReActivity.loginfo.logtypeSet(1);
                             ReActivity.loginfo.typeflagSet("0");
+                            ReActivity.sidcnt = 0;
                             ReActivity.mlocalcapture.setCapturePath(0);
                             ReActivity.time = new Timer();
                             ReActivity.testtask = ReActivity.new TestTask();

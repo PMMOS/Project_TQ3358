@@ -169,7 +169,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private FragmentTransaction fgt;
 	private DeviceLoginFragment devlogfragment;
 	private static String[] snapsid = new String[3];
-	private static int sidcnt;
+	protected static int sidcnt;
 	
 	//serials
 	private static final String ACTION_USB_PERMISSION = "com.embedsky.USB_PERMISSION";
@@ -190,7 +190,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	CheckBox[] cb = new CheckBox[2];
 	TextView[] tx = new TextView[6];
 	public static TextView tLogView;
-	
 	
 	//退出按钮
 	Button btnQuit;
@@ -252,9 +251,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		btnQuit.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				if(ledClose()){
+				//if(ledClose()){
 					finish();
-				}
+				//}
 				
 			}
 		});
@@ -374,7 +373,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
         File f = new File(File.separator+"mnt");
         if(!f.exists()){
         //if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
-        	Utils.showToast(context,"no SD card");
+        	Utils.showToast(context,"no pic file");
         	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), false).commit();
         }else{
         	sharedPreferences.edit().putBoolean(UserInfoItems.hasES.getValue(), true).commit();
@@ -469,6 +468,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 
 	            		@Override
 	            		public void onError(Exception e) {
+	            			//sidcnt = 0;
 	            		}
 
 	        		});
@@ -598,7 +598,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 
                     @Override
                	    public void onError(Exception e) {
-               	    	Log.e(LOG_TAG, "SEND FAILED");
+               	    	Log.e(LOG_TAG, "test SEND FAILED");
                     }
 		        });
 			}
@@ -609,10 +609,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	//gps update
 	private void updateLocation(Location location){
 		if(location != null){
-			tLogView.append(location.toString());
+			//tLogView.append(location.toString());
 			gpsx = String.format("%.9f", location.getLongitude());
 			gpsy = String.format("%.9f", location.getLatitude());
 			loginfo.gpsSet(gpsx,gpsy);
+			Log.d("GPS", "gpsx: "+gpsx+"\t"+"gpsy: "+gpsy);
 		}else{
 			Log.d(LOG_TAG, "no location object");
 		}
@@ -644,6 +645,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							int s = buffer[i] & 0xFF;
 							siz.add(s);
 						}
+						//Log.d("Serials", "data rev: "+ bytes2HexString(buffer, size));
 						//if(siz.size() > 11){
 						while(!siz.isEmpty()){
 							switch(mystatus){
@@ -785,7 +787,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 										}else{
 											data.add(hv);
 										}
-										Log.d(LOG_TAG, "send before"+data.toString());
+										//Log.d(LOG_TAG, "send before"+data.toString());
 										ArrayList<String> datatemp = new ArrayList<String>();
 										for(int i = 0; i < data.size(); i++){
 											datatemp.add(data.get(i));
@@ -867,7 +869,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
     	public void handleMessage(Message msg){	
     		if(msg.what == 1) {
     			ArrayList<String> data = (ArrayList<String>) msg.obj;
-	    		Log.d(LOG_TAG, data.toString());
+	    		Log.d("Serials", data.toString());
 	    		String flag = data.get(8);
 	    		String devid = data.get(4)+data.get(5)+data.get(6)+data.get(7);
 	    		if(flag.equals("00") && (!data.get(1).equals("05"))){
@@ -974,7 +976,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
     				String s =(String) msg.obj;
 	        		//Toast.makeText(LedActivity.this,s,Toast.LENGTH_SHORT).show();
 					//System.out.println(s);
-					Log.d(LOG_TAG, s);
+					Log.d(LOG_TAG, "heartpacktask"+s);
 					if(s != null){				
 						tx[5].setText(s+String.valueOf(cnt));	
 						cnt += 1;
@@ -1018,23 +1020,23 @@ public class LedActivity extends Activity implements mPictureCallBack{
     			}break;
     			case MESSAGE_GETUI:{
     				String s =(String) msg.obj;
-    				Log.d(LOG_TAG, s);
+    				Log.d(LOG_TAG, "getuicidup"+s);
     			}break;
     			case MESSAGE_WARNPACKAGE:{
     				String s =(String) msg.obj;
-    				Log.d(LOG_TAG, s);
+    				Log.d(LOG_TAG, "warn"+s);
     			}break;
     			case MESSAGE_PARAMSPACKAGE:{
     				String s =(String) msg.obj;
-    				Log.d(LOG_TAG, s);
+    				Log.d(LOG_TAG, "params"+s);
     			}break;
     			case MESSAGE_TESTPACKAGE: {
     				String s =(String) msg.obj;
-    				Log.d(LOG_TAG, s);
+    				Log.d(LOG_TAG, "test"+s);
     			}break;
     			case MESSAGE_LOCKCMDOPERATE: {
     				String s =(String) msg.obj;
-    				Log.d(LOG_TAG, s);
+    				Log.d(LOG_TAG, "lockcmd"+s);
     			}break;
     			case MESSAGE_USB_INSERT: {
     				initUSB();
@@ -1070,8 +1072,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					}
 					loginfo.tireSet(tirepressure);
 					if(tLogView != null){
-						// Log.d(LOG_TAG, Long.toHexString(id)+" "+tirepos+" "+String.format("%.3f",tirepre)+"kPa "+String.format("%.2f", tiretem)
-						// 	+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
+						 //Log.d("tirepressure", Long.toHexString(id)+" "+tirepos+" "+String.format("%.3f",tirepre)+"kPa "+String.format("%.2f", tiretem)
+						 	//+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 						//tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
 					//TODO Compare the tirevalue and tiretemperature
@@ -1089,12 +1091,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					switch (pid){
 						case 0x05: int temp = (int)res.get(3)-40;
 							  if(tLogView != null){
-								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(temp)+"\u00b0"+"C\n");
+								//Log.d("OBD", Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(temp)+"\u00b0"+"C\n");
 							  }
 							  break;
 						case 0x0C: int w = ((int)res.get(3)*256+(int)res.get(4))/4;
 							  if(tLogView != null){
-								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(w)+"rpm\n");
+								//Log.d("OBD", Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(w)+"rpm\n");
 							  }
 							  break;
 						case 0x0D: int v = res.get(3);
@@ -1117,7 +1119,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  	}
 							  }
 							  if(tLogView != null){
-								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(v)+"km/s\n");
+								//Log.d("OBD", Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(v)+"km/s\n");
 							  }
 							  break;
 						case 0x21: int distance = (int)res.get(3)*256+(int)res.get(4);
@@ -1128,7 +1130,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  	loginfo.distanceSet(distance-distance0);
 							  }
 							  if(tLogView != null){
-								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
+								//Log.d("OBD", Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(distance)+"km\n");
 							  }
 							  break;
 						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
@@ -1143,7 +1145,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  }
 							  fuelleveltemp = fuelLevel;
 							  if(tLogView != null){
-								tLogView.append(Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(fuelLevel)+"%\n");
+								//Log.d("OBD", Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(fuelLevel)+"%\n");
 							  }
 							  break;
 						default: break;
@@ -1317,6 +1319,19 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			
 			return;
 		}
+	}
+
+	public String bytes2HexString(byte[] buf, int length){
+		String result = new String();
+		if(buf != null){
+			for(int i = 0; i < length; i++) {
+				result = result + ((Integer.toHexString(buf[i] < 0? buf[i]+256 : buf[i])).length() == 1 ? 
+							"0"+(Integer.toHexString(buf[i] < 0? buf[i]+256 : buf[i])) : 
+							(Integer.toHexString(buf[i] < 0? buf[i]+256 : buf[i]))) + " ";
+			}
+			return result;
+		}
+		return "";
 	}
 
 }

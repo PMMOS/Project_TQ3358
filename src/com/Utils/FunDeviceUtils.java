@@ -230,12 +230,12 @@ public class FunDeviceUtils implements OnFunDeviceOptListener, OnFunDeviceRecord
 			}
 			// 获取信息成功后,如果WiFi连接了就自动播放
 			// 此处逻辑客户自定义
-			if (MyUtils.detectWifiNetwork(context)) {
+			//if (MyUtils.detectWifiNetwork(context)) {
 				handler.sendEmptyMessage(MESSAGE_DEVICE_LOGINSUCCEED);
-			} else {
-				Utils.showToast(context, R.string.meida_not_auto_play_because_no_wifi);
+			//} else {
+				//Utils.showToast(context, R.string.meida_not_auto_play_because_no_wifi);
 				//Utils.showToast(context, "media not auto play because no wifi");
-			}
+			//}
 		}
 	}
 
