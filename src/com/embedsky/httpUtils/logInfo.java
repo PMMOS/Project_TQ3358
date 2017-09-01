@@ -16,7 +16,8 @@ public class logInfo{
 	//haswarn=0 warntype=null heartpackages
 	private String gpsx;
 	private String gpsy;
-	private String speed;
+	private int speed;
+	private int gpsspeed;
 	private String distance;
 	private String fuelvol;
 	private tirePressure[] tire_val;
@@ -37,6 +38,7 @@ public class logInfo{
 	//haswarn=1 warntype=10 accident
 	//haswarn=1 warntype=11 overload
 	//capture sid
+	private String powerval;
 	private String[] snapshot = new String[3];
 	private String typeflag;
 	
@@ -45,7 +47,8 @@ public class logInfo{
 		trucknumber = "川C1234";
 		haswarn = "0";
 		warntype = "0";
-		speed = "0";
+		speed = 0;
+		gpsspeed = 0;
 		gpsx = "0";
 		gpsy = "0";
 		fuelvol = "0";
@@ -115,14 +118,22 @@ public class logInfo{
 	}
 
 	public void speedSet(int speedval){
-		if (speedval == 20){
+		if (speedval == 150){
 			haswarn = "1";
 			warntype = "5";
 		}else{
 			haswarn = "0";
 			warntype = null;
 		}
-		speed = String.valueOf(speedval);
+		speed = speedval;
+	}
+
+	public void gpsspeedSet(int gpsspeed) {
+		this.gpsspeed = gpsspeed;
+	}
+
+	public void powervalSet(String powerval){
+		this.powerval = powerval;
 	}
 
 	public void fuelvolSet(double fuelvolval){
@@ -141,19 +152,20 @@ public class logInfo{
 
 	public HashMap<String, String> logInfoGet(){
 		HashMap<String, String> log_val = new HashMap<String, String>();
+		int speedtemp = 0;
 		if(logtype == 0){ //thread1 upload packages normally
 			//try{
 			if(haswarn.equals("1")){
 				log_val.put("warntype",warntype);
 				if(warntype.equals("1")){
 					for(int i = 0; i < 3; i++){
-						log_val.put("snapshot"+String.valueOf(i), snapshot[i]);
+						log_val.put("snapshot"+String.valueOf(i+1), snapshot[i]);
 					}
 				}else if(warntype.equals("2")){
 					log_val.put("leakstatus", leakstatus);
 				}else if(warntype.equals("4")){
 					for(int i = 0; i < 3; i++){
-						log_val.put("snapshot"+String.valueOf(i), snapshot[i]);
+						log_val.put("snapshot"+String.valueOf(i+1), snapshot[i]);
 					}
 				}
 				warntype = "0";
@@ -166,23 +178,27 @@ public class logInfo{
 			}
 			log_val.put("trucknumber", trucknumber);
 			log_val.put("haswarn",haswarn);
-			log_val.put("speed",speed);
+			
+			speedtemp = speed != 0 ? speed:gpsspeed;
+			log_val.put("speed",String.valueOf(speedtemp));
+
 			log_val.put("gpsx",gpsx);
 			log_val.put("gpsy",gpsy);
 			log_val.put("fuelvol",fuelvol);
 			log_val.put("distance",distance);
 			log_val.put("time",String.valueOf(System.currentTimeMillis()));
 			haswarn = "0";
+			Log.d(LOG_TAG, "canbus: "+fuelvol+"\t"+speed+"\t"+distance+"\t"+lock_val);
 		// } catch (JSONException e1){
 		// 	e1.printStackTrace();
 		// }
 		}else if(logtype == 1){ //thread2 test get all the message including snapshot
 			log_val.put("warntype",warntype);
 			log_val.put("lock",lock_val);
-			Log.d(LOG_TAG, haswarn+ "\t"+warntype);
+			//Log.d(LOG_TAG, haswarn+ "\t"+warntype);
 			log_val.put("leakstatus", leakstatus);
 			for(int i = 0; i < 3; i++){
-				log_val.put("snapshot"+String.valueOf(i), snapshot[i]);
+				log_val.put("snapshot"+String.valueOf(i+1), snapshot[i]);
 			}
 			for(int i = 0; i< tire_val.length; i++){
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
@@ -190,12 +206,16 @@ public class logInfo{
 			}
 			log_val.put("trucknumber", trucknumber);
 			log_val.put("haswarn",haswarn);
-			log_val.put("speed",speed);
+
+			speedtemp = speed != 0 ? speed:gpsspeed;
+			log_val.put("speed",String.valueOf(speedtemp));
+			
 			log_val.put("gpsx",gpsx);
 			log_val.put("gpsy",gpsy);
 			log_val.put("fuelvol",fuelvol);
 			log_val.put("distance",distance);
 			log_val.put("time",String.valueOf(System.currentTimeMillis()));
+			Log.d(LOG_TAG, "canbus: "+fuelvol+"\t"+speed+"\t"+distance+"\t"+lock_val);
 		}else{ //thread3 test get the tirepressure and temperature data
 			for(int i = 0; i< tire_val.length; i++){
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());

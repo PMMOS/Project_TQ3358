@@ -149,6 +149,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	Location location;
 	private static String gpsx;
 	private static String gpsy;
+	private static float speed;
 
 	//can总线
 	private static IMycanService mycanservice;
@@ -185,6 +186,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private static lockStruct[] lockstruct = new lockStruct[5];
 	public static String[] lockstatustemp = new String[5];
 	private static int lockwarncnt;
+	private static int leakstatuscnt;
 
 	//CheckBox数组，用来存放2个led灯控件
 	CheckBox[] cb = new CheckBox[2];
@@ -228,11 +230,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			cb[i].setOnClickListener(myClickListern);
 		}
 		
-		lockstruct[0] = new lockStruct("up_front","0");
-		lockstruct[1] = new lockStruct("up_middle","0");
-		lockstruct[2] = new lockStruct("up_back","0");
-		lockstruct[3] = new lockStruct("down_left","0");
-		lockstruct[4] = new lockStruct("down_right","0");
+		lockstruct[0] = new lockStruct("up_front","1");
+		lockstruct[1] = new lockStruct("up_middle","1");
+		lockstruct[2] = new lockStruct("up_back","1");
+		lockstruct[3] = new lockStruct("down_left","1");
+		lockstruct[4] = new lockStruct("down_right","1");
 		loginfo.lockSet(lockstruct);
 
 		tirepressure[0] = new tirePressure("lefttirepressure","0","lefttiretemp","0");
@@ -311,12 +313,14 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			initUSB();
 		}
 		lockwarncnt = 0;
+		leakstatuscnt = 0;
 		
 		//gps initial
 		LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 		Criteria criteria = new Criteria();
 		criteria.setAccuracy(Criteria.ACCURACY_FINE);
 		criteria.setAltitudeRequired(true);
+		criteria.setSpeedRequired(true);
 		criteria.setBearingRequired(false);
 		criteria.setCostAllowed(true);
 		criteria.setPowerRequirement(Criteria.POWER_LOW);
@@ -397,7 +401,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		//timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
 		//heartpacktask = new HeartpackTask();
 		//warnpacktask = new WarnpackTask();
-		cansendtime.schedule(cansendtask, 1000, 5000);
+		cansendtime.schedule(cansendtask, 1000, 1000);
 		//time.schedule(heartpacktask, 5000, 60000);
 		//time.schedule(warnpacktask, 6000, 20000);
 	}
@@ -612,8 +616,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			//tLogView.append(location.toString());
 			gpsx = String.format("%.9f", location.getLongitude());
 			gpsy = String.format("%.9f", location.getLatitude());
+			speed = location.getSpeed();
 			loginfo.gpsSet(gpsx,gpsy);
-			Log.d("GPS", "gpsx: "+gpsx+"\t"+"gpsy: "+gpsy);
+			loginfo.gpsspeedSet((int)speed);
+			Log.d("GPS", "gpsx: "+gpsx+"\t"+"gpsy: "+gpsy+"\t"+"gpsspeed: "+speed);
 		}else{
 			Log.d(LOG_TAG, "no location object");
 		}
@@ -915,6 +921,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						if(lockwarncnt > 20 && app.wirelessflag == 1){
 							if(warntypecnt[1] < 1) {
 								loginfo.typeflagSet("1");
+								sidcnt = 0;
 								mlocalcapture.setCapturePath(0);
 								warntypecnt[1] += 1;
 							}
@@ -951,16 +958,26 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    				loginfo.leakstatusSet(String.valueOf(leakstatusval));
 	    				//TODO Compare leakstatus and send 
 	    				if(leakstatusval > 64 && app.wirelessflag == 1){
-	    					if(warntypecnt[1] < 1){
+	    					leakstatuscnt += 1;
+	    					if(warntypecnt[1] < 1 && leakstatuscnt > 20){
 	    						loginfo.haswarnSet("1");
 	    						loginfo.typeSet("2");
 	    						warnmsgbuf.add(loginfo.logInfoGet());
 	    						warntypecnt[1] += 1;
+	    						leakstatuscnt = 0;
 	    					}
+	    				}else{
+	    					leakstatuscnt = 0;
 	    				}
 	    			//}
-	    		}else if(flag.equals("02")){
+	    		}else if(flag.equals("02")){//weight data
 
+	    		}else if(flag.equals("03")){//power 
+	    			int powerval = Integer.parseInt(data.get(9),16);
+	    			Log.d("Serials", "powerval: "+String.valueOf(powerval));
+	    			if(powerval < 10){
+	    				tLogView.append("warn powerval: "+String.valueOf(powerval));
+	    			}
 	    		}	
     		}
     		
@@ -1062,8 +1079,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					ArrayList<Integer> res =(ArrayList<Integer>) msg.obj;
 					//Log.d(LOG_TAG, res.toString());
 					int tirepos = res.get(0);
-					double tirepre = ((int)res.get(1))*8*0.001;
-					double tiretem = (((int)res.get(2)*256+(int)res.get(3))*0.03125-273)*0.1;
+					double tirepre = ((int)res.get(1))*8;
+					double tiretem = ((int)res.get(2)*256+(int)res.get(3))*0.03125-273;
 					double tirev = ((int)res.get(5)*256+(int)res.get(6))*0.1;
 					int tiretype = res.get(7) >> 5;
 					if(tirepos < tirepressure.length){
@@ -1139,6 +1156,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  if(fuelLevel - fuelleveltemp > 1){
 							  	if(warntypecnt[4] < 1 ) {
 							  		loginfo.typeflagSet("4");
+							  		sidcnt = 0;
 							  		mlocalcapture.setCapturePath(0);
 							  		warntypecnt[4] += 1 ;
 							  	}
@@ -1185,7 +1203,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				handler.sendEmptyMessage(MESSAGE_USB_UNINSERT);
 			}
 		}
-
 	};
 
 	/*
@@ -1274,7 +1291,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				//controlLed(i + 1, cb[i].isChecked());
 				if(cb[0].isChecked()){
 					//mlocalcapture.setCapturePath(0);
-					loginfo.speedSet(20);
+					loginfo.speedSet(150);
 					HashMap<String, String> tem = loginfo.logInfoGet();
 					Log.d(LOG_TAG, tem.toString());
 					httpUtils.doPostAsyn(url, tem, new httpUtils.HttpCallBackListener() {
@@ -1296,7 +1313,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			}else if(v == cb[1]){
 				if(cb[1].isChecked()){
 					try{
-						ch340AndroidDriver.WriteData(app.packdata("55 66 77 88", "00"), app.packdata("55 66 77 88", "00").length);
+						for(int i = 1; i < 3; i++){
+							ch340AndroidDriver.WriteData(app.packdata(app.lockdevid[i], "00"), 
+															app.packdata(app.lockdevid[i], "00").length);
+						}
 						//mOutputStream.write(app.packdata("55 66 77 88", "00"));
 						//mOutputStream.write('\n');
 					} catch (IOException e){
@@ -1307,7 +1327,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					//mlocalcapture.setCapturePath(2);
 				}else{
 					try{
-						ch340AndroidDriver.WriteData(app.packdata("55 66 77 88", "01"), app.packdata("55 66 77 88", "01").length);
+						for(int i = 1; i < 3; i++){
+							ch340AndroidDriver.WriteData(app.packdata(app.lockdevid[i], "01"), 
+															app.packdata(app.lockdevid[i], "01").length);
+						}
 						//mOutputStream.write(app.packdata("55 66 77 88", "01"));
 						//mOutputStream.write('\n');
 					} catch (IOException e){
