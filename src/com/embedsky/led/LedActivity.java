@@ -149,7 +149,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	Location location;
 	private static String gpsx;
 	private static String gpsy;
-	private static float speed;
+	private static float speed = 0;
 
 	//can总线
 	private static IMycanService mycanservice;
@@ -1120,14 +1120,14 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  loginfo.speedSet(v);
 							  //TODO Compare the speed to get stop/high-speed/exhausted drive/...
 							  //and send
-							  if(v == 0) {
+							  if(v == 0 && speed == 0 ) {
 							  	if(warntypecnt[6] < 2) {
 									loginfo.haswarnSet("1");
 								  	loginfo.typeSet("6");
 								  	warnmsgbuf.add(loginfo.logInfoGet());
 								  	warntypecnt[6] += 1;
 							  	}
-							  }else if(v > 80) {
+							  }else if(v > 80 || speed > 80) {
 							  	if(warntypecnt[5] < 2) {
 									loginfo.haswarnSet("1");
 								  	loginfo.typeSet("5");
