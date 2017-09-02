@@ -333,7 +333,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 
 			@Override
 			public void onLocationChanged(Location location){
-				Log.d(LOG_TAG,location.toString());
+				//Log.d(LOG_TAG,location.toString());
 				updateLocation(location);
 			}
 
@@ -619,7 +619,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			speed = location.getSpeed();
 			loginfo.gpsSet(gpsx,gpsy);
 			loginfo.gpsspeedSet((int)speed);
-			Log.d("GPS", "gpsx: "+gpsx+"\t"+"gpsy: "+gpsy+"\t"+"gpsspeed: "+speed);
+			//Log.d("GPS", "gpsx: "+gpsx+"\t"+"gpsy: "+gpsy+"\t"+"gpsspeed: "+speed);
 		}else{
 			Log.d(LOG_TAG, "no location object");
 		}
