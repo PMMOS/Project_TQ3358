@@ -104,29 +104,23 @@ public class ReGetuiApplication extends Application {
                         case 8: {
                             //TODO close the lock   
                             wirelessflag = 1;
-                            try{
+                            for(int i = 0; i < 5; i++){
                                 //ReActivity.lockstatustemp[0] = "1";
-                                for(int i = 1; i < 3; i++){
-                                     ReActivity.ch340AndroidDriver.WriteData(packdata(lockdevid[i], "01"), 
-                                                    packdata(lockdevid[i], "01").length);
-                                    ReActivity.lockstatustemp[2+i] = "1";
+                                for(int j = 1; j < 3; j++){
+                                    ReActivity.serialssendbuf.add(lockdevid[j]+"|"+"01");
+                                    ReActivity.lockstatustemp[2+j] = "1";
                                 }
-                            }catch (IOException e){
-                                e.printStackTrace();
                             }
                         }break;
                         case 9: {
                             //TODO  close the lock
                             wirelessflag = 0;
-                            try{
+                            for(int i = 0; i < 5; i++){
                                 //ReActivity.lockstatustemp[0] = "1";
-                                for(int i = 1; i < 3; i++){
-                                     ReActivity.ch340AndroidDriver.WriteData(packdata(lockdevid[i], "01"), 
-                                                    packdata(lockdevid[i], "01").length);
-                                    ReActivity.lockstatustemp[2+i] = "1";
+                                for(int j = 1; j < 3; j++){
+                                    ReActivity.serialssendbuf.add(lockdevid[j]+"|"+"01");
+                                    ReActivity.lockstatustemp[2+j] = "1";
                                 }
-                            }catch (IOException e){
-                                e.printStackTrace();
                             }
                         }break;
     					case 11: {
@@ -136,56 +130,42 @@ public class ReGetuiApplication extends Application {
     						if(operate.equals("0")){
 		        				//temp = true;
 		        				//temp = ReActivity.ledSetOn(1);
-		        				try{
+		        				for(int i = 0; i < 5; i++){
                                     //for(int i = 0; i < 1; i++){
-                                        ReActivity.ch340AndroidDriver.WriteData(packdata(lockdevid[1], "00"), 
-                                                    packdata(lockdevid[1], "00").length);
+                                        ReActivity.serialssendbuf.add(lockdevid[1]+"|"+"00");
                                         ReActivity.lockstatustemp[3] = "0";
                                     //}
-		        				}catch (IOException e){
-		        					//temp = false;
-		        					e.printStackTrace();
 		        				}
 		        				
 	        				}else if(operate.equals("1")){
 			        			//temp = true;
 			        			//temp = ReActivity.ledSetOff(1);
-			        			try{
+			        			for(int i = 0; i < 5; i++){
                                    //ReActivity.lockstatustemp[0] = "1";
                                     //for(int i = 0; i < 1; i++){
-                                        ReActivity.ch340AndroidDriver.WriteData(packdata(lockdevid[1], "01"), 
-                                                    packdata(lockdevid[1], "01").length);
+                                        ReActivity.serialssendbuf.add(lockdevid[1]+"|"+"01");
                                         ReActivity.lockstatustemp[3] = "1";
                                     //}
-		        				}catch (IOException e){
-		        					//temp = false;
-		        					e.printStackTrace();
 		        				}
 			        		}else if(operate.equals("2")){
 			        			//temp = true;
 			        			//temp = ReActivity.ledSetOn(2);
 			        			//ReActivity.mOutputStream.write();
-                                try{
+                                for(int i = 0; i < 5; i++){
                                     //for(int i = 1; i < 3; i++){
-                                        ReActivity.ch340AndroidDriver.WriteData(packdata(lockdevid[2], "00"), 
-                                                        packdata(lockdevid[2], "00").length);
+                                        ReActivity.serialssendbuf.add(lockdevid[2]+"|"+"00");
                                         ReActivity.lockstatustemp[4] = "0";
                                     //}
-                                }catch (IOException e){
-                                    e.printStackTrace();
                                 }
 			        		}else if(operate.equals("3")){
 			        			//temp = true;
 			        			//temp = ReActivity.ledSetOff(2);
 			        			//ReActivity.mOutputStream.write();
-                                try{
+                                for(int i = 0; i < 5; i++){
                                     //for(int i = 1; i < 3; i++){
-                                        ReActivity.ch340AndroidDriver.WriteData(packdata(lockdevid[2], "01"), 
-                                                        packdata(lockdevid[2], "01").length);
+                                        ReActivity.serialssendbuf.add(lockdevid[2]+"|"+"01");
                                         ReActivity.lockstatustemp[4] = "1";
                                     //}
-                                }catch (IOException e){
-                                    e.printStackTrace();
                                 }
 			        		}
 			        		//int ope = temp?1:0;

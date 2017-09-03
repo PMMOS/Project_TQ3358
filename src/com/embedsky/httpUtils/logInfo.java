@@ -26,6 +26,7 @@ public class logInfo{
 	private String warntype;
 	//haswarn=1 warntype=1 lock exception and capture
 	private String lock_val;
+	private String pow_val;
 	//haswarn=1 warntype=2 leakage//
 	private String leakstatus;
 	//haswarn=1 warntype=3 tirepressure warn//
@@ -38,7 +39,6 @@ public class logInfo{
 	//haswarn=1 warntype=10 accident
 	//haswarn=1 warntype=11 overload
 	//capture sid
-	private String powerval;
 	private String[] snapshot = new String[3];
 	private String typeflag;
 	
@@ -67,11 +67,14 @@ public class logInfo{
 	
 	public void lockSet(lockStruct[] lockstruct){
 		lock_val = new String();
+		pow_val = new String();
 		//if(!warntype.equals("1")){
 			for(int i=0; i<lockstruct.length;i++){
 				lock_val += lockstruct[i].getlockStatus()+"-";
+				pow_val += lockstruct[i].getpowerVal()+"-";
 			}
 			lock_val = lock_val.substring(0, lock_val.length()-1);
+			pow_val = pow_val.substring(0, pow_val.length()-1);
 		//}
 	}
 
@@ -132,10 +135,6 @@ public class logInfo{
 		this.gpsspeed = gpsspeed;
 	}
 
-	public void powervalSet(String powerval){
-		this.powerval = powerval;
-	}
-
 	public void fuelvolSet(double fuelvolval){
 		fuelvol = Double.toString(fuelvolval);
 	}
@@ -172,6 +171,7 @@ public class logInfo{
 			}
 
 			log_val.put("lock",lock_val);
+			log_val.put("battery",pow_val);
 			for(int i = 0; i< tire_val.length; i++){
 				log_val.put(tire_val[i].gettireName(),tire_val[i].gettireVal());
 				log_val.put(tire_val[i].gettireTempName(),tire_val[i].gettireTempVal());
@@ -195,6 +195,7 @@ public class logInfo{
 		}else if(logtype == 1){ //thread2 test get all the message including snapshot
 			log_val.put("warntype",warntype);
 			log_val.put("lock",lock_val);
+			log_val.put("battery",pow_val);
 			//Log.d(LOG_TAG, haswarn+ "\t"+warntype);
 			log_val.put("leakstatus", leakstatus);
 			for(int i = 0; i < 3; i++){

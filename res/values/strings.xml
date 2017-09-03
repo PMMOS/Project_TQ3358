@@ -6,11 +6,17 @@
     <string name="app_welcome">Welcome</string>
     <string name="cb_Lock1">LOCK1</string>
     <string name="cb_Lock2">LOCK2</string>
+    <string name="cb_Lock3">LOCK3</string>
     <string name="tx_Lock1">Lock1 Status</string>
+    <string name="tx_Power1">Pow1</string>
     <string name="tx_Lock2">Lock2 Status</string>
+    <string name="tx_Power2">Pow2</string>
     <string name="tx_Lock3">Lock3 Status</string>
+    <string name="tx_Power3">Pow3</string>
     <string name="tx_Lock4">Lock4 Status</string>
+    <string name="tx_Power4">Pow4</string>
     <string name="tx_Lock5">Lock5 Status</string>
+    <string name="tx_Power5">Pow5</string>
     <string name="quit">Quit</string>
     <string name= "getuidownload_info">50%</string>
     <string name= "getui_title">title</string>

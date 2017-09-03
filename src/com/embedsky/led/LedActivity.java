@@ -133,11 +133,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private static int[] warntypecnt = new int[10];
 	protected static LinkedList<HashMap<String, String>> warnmsgbuf = new LinkedList<HashMap<String, String>>();
 	private static LinkedList<HashMap<String, String>> testmsgbuf = new LinkedList<HashMap<String, String>>();
+	protected static LinkedList<String> serialssendbuf = new LinkedList<String>();
 	private static boolean flag;
 	private static int cnt;	
 
 	//Timer timer = new Timer();
-	Timer cansendtime = new Timer();
+	Timer sendtime = new Timer();
 	Timer time = new Timer();
 	ExecutorService executorService = Executors.newFixedThreadPool(3);
 	protected HeartpackTask heartpacktask;
@@ -188,9 +189,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private static int lockwarncnt;
 	private static int leakstatuscnt;
 
-	//CheckBox数组，用来存放2个led灯控件
-	CheckBox[] cb = new CheckBox[2];
-	TextView[] tx = new TextView[6];
+	//CheckBox数组，用来存放3个test控件
+	CheckBox[] cb = new CheckBox[3];
+	TextView[] tx = new TextView[11];
 	public static TextView tLogView;
 	
 	//退出按钮
@@ -207,6 +208,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		//获取xml中对应的控件
 		cb[0] = (CheckBox) findViewById(R.id.cb_Lock1);
 		cb[1] = (CheckBox) findViewById(R.id.cb_Lock2);
+		cb[2] = (CheckBox) findViewById(R.id.cb_Lock3);
 		
 		tx[0] = (TextView) findViewById(R.id.tx_Lock1);
 		tx[1] = (TextView) findViewById(R.id.tx_Lock2);
@@ -214,6 +216,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		tx[3] = (TextView) findViewById(R.id.tx_Lock4);
 		tx[4] = (TextView) findViewById(R.id.tx_Lock5);
 		tx[5] = (TextView) findViewById(R.id.postview);
+		tx[6] = (TextView) findViewById(R.id.tx_Power1);
+		tx[7] = (TextView) findViewById(R.id.tx_Power2);
+		tx[8] = (TextView) findViewById(R.id.tx_Power3);
+		tx[9] = (TextView) findViewById(R.id.tx_Power4);
+		tx[10] = (TextView) findViewById(R.id.tx_Power5);
 		
 		tLogView =(TextView) findViewById(R.id.receiveview);
 		tLogView.setSingleLine(false);
@@ -226,15 +233,15 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		ReGetuiApplication.ReActivity = this;
 
 		// LED1-LED8选中/取消事件
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 3; i++) {
 			cb[i].setOnClickListener(myClickListern);
 		}
 		
-		lockstruct[0] = new lockStruct("up_front","1");
-		lockstruct[1] = new lockStruct("up_middle","1");
-		lockstruct[2] = new lockStruct("up_back","1");
-		lockstruct[3] = new lockStruct("down_left","1");
-		lockstruct[4] = new lockStruct("down_right","1");
+		lockstruct[0] = new lockStruct("up_front","1","0");
+		lockstruct[1] = new lockStruct("up_middle","1","0");
+		lockstruct[2] = new lockStruct("up_back","1","0");
+		lockstruct[3] = new lockStruct("down_left","1","0");
+		lockstruct[4] = new lockStruct("down_right","1","0");
 		loginfo.lockSet(lockstruct);
 
 		tirepressure[0] = new tirePressure("lefttirepressure","0","lefttiretemp","0");
@@ -401,7 +408,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		//timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
 		//heartpacktask = new HeartpackTask();
 		//warnpacktask = new WarnpackTask();
-		cansendtime.schedule(cansendtask, 1000, 1000);
+		sendtime.schedule(cansendtask, 1000, 1000);
+		sendtime.schedule(serialssendtask, 1500, 1000);
 		//time.schedule(heartpacktask, 5000, 60000);
 		//time.schedule(warnpacktask, 6000, 20000);
 	}
@@ -507,6 +515,29 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				//Log.d(LOG_TAG, "Mycan SEND");
 			}catch(RemoteException e){
 				e.printStackTrace();
+			}
+		}
+	};
+
+	//serials send task
+	TimerTask serialssendtask = new TimerTask(){
+		@Override
+		public void run(){
+			if(!serialssendbuf.isEmpty()){
+				//Log.d(LOG_TAG, serialssendbuf.get(0));
+				String[] sendbuftemp = serialssendbuf.get(0).split("\\|");
+				serialssendbuf.removeFirst();
+				if(sendbuftemp.length == 2){
+					//Log.d(LOG_TAG, sendbuftemp[0]+"\t"+sendbuftemp[1]);
+					try{
+						ch340AndroidDriver.WriteData(app.packdata(sendbuftemp[0], sendbuftemp[1]), 
+															app.packdata(sendbuftemp[0], sendbuftemp[1]).length);
+					}catch(IOException e){
+						e.printStackTrace();
+						Log.e(LOG_TAG, "Send failed");
+					}
+					
+				}
 			}
 		}
 	};
@@ -882,26 +913,26 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    			if(devid.equals("55667788")){	
 	    				if(data.get(9).equals("00")){
 							lockstruct[0].setlockStatus("0");
-							tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
+							tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
 						}else if(data.get(9).equals("01")){
 							lockstruct[0].setlockStatus("1");
-							tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
+							tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
 						}
 					}else if(devid.equals("55667789")){
 						if(data.get(9).equals("00")){
 							lockstruct[3].setlockStatus("0");
-							tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
+							tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
 						}else if(data.get(9).equals("01")){
 							lockstruct[3].setlockStatus("1");
-							tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
+							tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
 						}
 					}else if(devid.equals("55667790")){
 						if(data.get(9).equals("00")){
 							lockstruct[4].setlockStatus("0");
-							tx[4].setText("lock"+lockstruct[4].getlockName()+"\t\t"+lockstruct[4].getlockStatus());
+							tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
 						}else if(data.get(9).equals("01")){
 							lockstruct[4].setlockStatus("1");
-							tx[4].setText("lock"+lockstruct[4].getlockName()+"\t\t"+lockstruct[4].getlockStatus());
+							tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
 						}
 					}
 					//TODO Compare status 
@@ -973,10 +1004,21 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    		}else if(flag.equals("02")){//weight data
 
 	    		}else if(flag.equals("03")){//power 
+	    			//TODO powerval upload to loginfo
 	    			int powerval = Integer.parseInt(data.get(9),16);
 	    			Log.d("Serials", "powerval: "+String.valueOf(powerval));
+	    			if(devid.equals("55667788")){	
+						lockstruct[0].setpowerVal(String.valueOf(powerval));
+						tx[6].setText("\t"+lockstruct[0].getpowerVal());
+					}else if(devid.equals("55667789")){
+						lockstruct[3].setpowerVal(String.valueOf(powerval));
+						tx[9].setText("\t"+lockstruct[3].getpowerVal());
+					}else if(devid.equals("55667790")){
+						lockstruct[4].setpowerVal(String.valueOf(powerval));
+						tx[10].setText("\t"+lockstruct[4].getpowerVal());
+					}
 	    			if(powerval < 10){
-	    				tLogView.append("warn powerval: "+String.valueOf(powerval));
+	    				tLogView.append("warn powerval: "+devid+String.valueOf(powerval));
 	    			}
 	    		}	
     		}
@@ -1284,10 +1326,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	public class MyClickListener implements OnClickListener {
 		@Override
 		public void onClick(View v) {
-			//遍历数组，判断是哪个led控件被选中
+			//遍历数组，判断是哪个test控件被选中
 			
 			if (v == cb[0]) {
-				//根据选中/取消状态来控制lock的开/关
+				//根据选中/取消状态来控制test的开/关
 				//controlLed(i + 1, cb[i].isChecked());
 				if(cb[0].isChecked()){
 					//mlocalcapture.setCapturePath(0);
@@ -1312,31 +1354,35 @@ public class LedActivity extends Activity implements mPictureCallBack{
 				
 			}else if(v == cb[1]){
 				if(cb[1].isChecked()){
-					try{
-						for(int i = 1; i < 3; i++){
-							ch340AndroidDriver.WriteData(app.packdata(app.lockdevid[i], "00"), 
-															app.packdata(app.lockdevid[i], "00").length);
-						}
-						//mOutputStream.write(app.packdata("55 66 77 88", "00"));
-						//mOutputStream.write('\n');
-					} catch (IOException e){
-						e.printStackTrace();
-						Log.e(LOG_TAG,"send failed");
+					for(int i = 0; i < 5; i++){
+						serialssendbuf.add(app.lockdevid[1]+"|"+"00");
 					}
-					
+					//mOutputStream.write(app.packdata("55 66 77 88", "00"));
+					//mOutputStream.write('\n');
+				
 					//mlocalcapture.setCapturePath(2);
 				}else{
-					try{
-						for(int i = 1; i < 3; i++){
-							ch340AndroidDriver.WriteData(app.packdata(app.lockdevid[i], "01"), 
-															app.packdata(app.lockdevid[i], "01").length);
-						}
-						//mOutputStream.write(app.packdata("55 66 77 88", "01"));
-						//mOutputStream.write('\n');
-					} catch (IOException e){
-						e.printStackTrace();
-						Log.e(LOG_TAG,"send failed");
+					for(int i = 0; i < 5; i++){
+						serialssendbuf.add(app.lockdevid[1]+"|"+"01");
 					}
+					//mOutputStream.write(app.packdata("55 66 77 88", "01"));
+					//mOutputStream.write('\n');
+				}
+			}else if(v == cb[2]){
+				if(cb[2].isChecked()){
+					for(int i = 0; i < 5; i++){
+						serialssendbuf.add(app.lockdevid[2]+"|"+"00");
+					}
+					//mOutputStream.write(app.packdata("55 66 77 88", "00"));
+					//mOutputStream.write('\n');
+				
+					//mlocalcapture.setCapturePath(2);
+				}else{
+					for(int i = 0; i < 5; i++){
+						serialssendbuf.add(app.lockdevid[2]+"|"+"01");
+					}
+					//mOutputStream.write(app.packdata("55 66 77 88", "01"));
+					//mOutputStream.write('\n');
 				}
 			}
 			

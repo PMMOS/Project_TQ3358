@@ -27,6 +27,13 @@
             android:layout_height="wrap_content"
             android:checked="false"
             android:text="@string/cb_Lock2" />
+        
+        <CheckBox 
+            android:id="@+id/cb_Lock3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/cb_Lock3" />
 
         <Button
             android:id="@+id/btnQuit"
@@ -51,40 +58,116 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical" >
 
-                <TextView
-                    android:id="@+id/tx_Lock1"
+                <LinearLayout 
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tx_Lock1"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_Lock1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_Lock1"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_Power1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_Power1"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
+                
 
-                <TextView
-                    android:id="@+id/tx_Lock2"
+                <LinearLayout 
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tx_Lock2"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_Lock2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_Lock2"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_Power2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_Power2"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tx_Lock3"
+               <LinearLayout 
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tx_Lock3"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_Lock3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_Lock3"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_Power3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_Power3"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tx_Lock4"
+               <LinearLayout 
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tx_Lock4"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_Lock4"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_Lock4"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_Power4"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_Power4"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tx_Lock5"
+                <LinearLayout 
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tx_Lock5"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_Lock5"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_Lock5"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_Power5"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_Power5"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
 
                 <View
                     android:layout_width="wrap_content"
