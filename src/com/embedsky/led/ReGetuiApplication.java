@@ -124,7 +124,6 @@ public class ReGetuiApplication extends Application {
                             }
                         }break;
     					case 11: {
-                            sid = command.getString("sid");
     						operate = command.getString("operate");
                             lockoperateflag = 1;
     						if(operate.equals("0")){
@@ -133,6 +132,7 @@ public class ReGetuiApplication extends Application {
 		        				for(int i = 0; i < 5; i++){
                                     //for(int i = 0; i < 1; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[1]+"|"+"00");
+                                        Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
                                         ReActivity.lockstatustemp[3] = "0";
                                     //}
 		        				}
@@ -144,6 +144,7 @@ public class ReGetuiApplication extends Application {
                                    //ReActivity.lockstatustemp[0] = "1";
                                     //for(int i = 0; i < 1; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[1]+"|"+"01");
+                                        Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
                                         ReActivity.lockstatustemp[3] = "1";
                                     //}
 		        				}
@@ -154,6 +155,7 @@ public class ReGetuiApplication extends Application {
                                 for(int i = 0; i < 5; i++){
                                     //for(int i = 1; i < 3; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[2]+"|"+"00");
+                                        Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
                                         ReActivity.lockstatustemp[4] = "0";
                                     //}
                                 }
@@ -164,11 +166,18 @@ public class ReGetuiApplication extends Application {
                                 for(int i = 0; i < 5; i++){
                                     //for(int i = 1; i < 3; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[2]+"|"+"01");
+                                        Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
                                         ReActivity.lockstatustemp[4] = "1";
                                     //}
                                 }
 			        		}
 			        		//int ope = temp?1:0;
+                            if(!command.isNull("sid")){
+                                sid = command.getString("sid");
+                            }else{
+                                sid = "0";
+                            }    
+                            
 			    			reparams.put("sid", sid);
 			    			//reparams.put("type", type);
 			    			//reparams.put("operate", String.valueOf(ope));
@@ -213,11 +222,11 @@ public class ReGetuiApplication extends Application {
     			}
     			Log.d(LOG_TAG, (String) msg.obj);
         		if(ReActivity.tLogView != null){
-    				ReActivity.tLogView.append(msg.obj +"\n");
+    				ReActivity.tLogView.setText(msg.obj+"");
     			}
         	}else if(ReActivity != null && msg.what == 1){
         		if(ReActivity.tLogView != null){
-    				ReActivity.tLogView.append(msg.obj +"\n");
+    				ReActivity.tLogView.setText(msg.obj+"");
     			}
         	}		       	
         }

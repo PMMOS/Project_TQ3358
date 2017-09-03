@@ -17,6 +17,12 @@
     <string name="tx_Power4">Pow4</string>
     <string name="tx_Lock5">Lock5 Status</string>
     <string name="tx_Power5">Pow5</string>
+    <string name="tx_leakleft">leakleft</string>
+    <string name="tx_leakright">leakright</string>
+    <string name="tx_lefttire">lefttire</string>
+    <string name="tx_lefttemp">lefttemp</string>
+    <string name="tx_righttire">righttire</string>
+    <string name="tx_righttemp">righttemp</string>
     <string name="quit">Quit</string>
     <string name= "getuidownload_info">50%</string>
     <string name= "getui_title">title</string>

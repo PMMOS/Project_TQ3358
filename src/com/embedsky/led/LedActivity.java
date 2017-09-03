@@ -191,7 +191,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 
 	//CheckBox数组，用来存放3个test控件
 	CheckBox[] cb = new CheckBox[3];
-	TextView[] tx = new TextView[11];
+	TextView[] tx = new TextView[17];
 	public static TextView tLogView;
 	
 	//退出按钮
@@ -221,6 +221,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		tx[8] = (TextView) findViewById(R.id.tx_Power3);
 		tx[9] = (TextView) findViewById(R.id.tx_Power4);
 		tx[10] = (TextView) findViewById(R.id.tx_Power5);
+		tx[11] = (TextView) findViewById(R.id.tx_leakleft);
+		tx[12] = (TextView) findViewById(R.id.tx_leakright);
+		tx[13] = (TextView) findViewById(R.id.tx_lefttire);
+		tx[14] = (TextView) findViewById(R.id.tx_lefttemp);
+		tx[15] = (TextView) findViewById(R.id.tx_righttire);
+		tx[16] = (TextView) findViewById(R.id.tx_righttemp);
 		
 		tLogView =(TextView) findViewById(R.id.receiveview);
 		tLogView.setSingleLine(false);
@@ -524,7 +530,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		@Override
 		public void run(){
 			if(!serialssendbuf.isEmpty()){
-				//Log.d(LOG_TAG, serialssendbuf.get(0));
+				Log.d(LOG_TAG, serialssendbuf.get(0));
 				String[] sendbuftemp = serialssendbuf.get(0).split("\\|");
 				serialssendbuf.removeFirst();
 				if(sendbuftemp.length == 2){
@@ -987,6 +993,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    			//if(devid.equals("55667788")){
 	    				int leakstatusval = Integer.parseInt(data.get(9),16);
 	    				loginfo.leakstatusSet(String.valueOf(leakstatusval));
+	    				if(devid.equals("55667789")){
+	    					tx[11].setText(String.valueOf(leakstatusval));
+	    				}else if(devid.equals("55667790")){
+	    					tx[12].setText(String.valueOf(leakstatusval));
+	    				}
 	    				//TODO Compare leakstatus and send 
 	    				if(leakstatusval > 64 && app.wirelessflag == 1){
 	    					leakstatuscnt += 1;
@@ -1018,7 +1029,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						tx[10].setText("\t"+lockstruct[4].getpowerVal());
 					}
 	    			if(powerval < 10){
-	    				tLogView.append("warn powerval: "+devid+String.valueOf(powerval));
+	    				tLogView.setText("warn powerval: "+devid+String.valueOf(powerval));
 	    			}
 	    		}	
     		}
@@ -1127,7 +1138,9 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					int tiretype = res.get(7) >> 5;
 					if(tirepos < tirepressure.length){
 						tirepressure[tirepos].settireVal(String.format("%.3f",tirepre));
+						tx[13+tirepos*2].setText(String.format("%.3f",tirepre));
 						tirepressure[tirepos].settireTempVal(String.format("%.2f", tiretem));
+						tx[14+tirepos*2].setText(String.format("%.2f", tiretem));
 					}
 					loginfo.tireSet(tirepressure);
 					if(tLogView != null){
@@ -1316,7 +1329,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
     
     @Override
     protected void onDestroy(){
-    	fdu.OnDestory();
+    	fdu.OnDestory();//onDestroy
     	ch340AndroidDriver.CloseDevice();
     	unregisterReceiver(mUsbDeviceReceiver);
     	super.onDestroy();

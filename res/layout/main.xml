@@ -101,7 +101,7 @@
                         android:text="@string/tx_Power2"
                         android:textAppearance="?android:attr/textAppearanceLarge"/>
                     
-                </LinearLayout>
+               </LinearLayout>
 
                <LinearLayout 
                     android:layout_width="match_parent"
@@ -123,7 +123,7 @@
                         android:text="@string/tx_Power3"
                         android:textAppearance="?android:attr/textAppearanceLarge"/>
                     
-                </LinearLayout>
+               </LinearLayout>
 
                <LinearLayout 
                     android:layout_width="match_parent"
@@ -168,6 +168,72 @@
                         android:textAppearance="?android:attr/textAppearanceLarge"/>
                     
                 </LinearLayout>
+                
+                <LinearLayout 
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_leakleft"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_leakleft"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_leakright"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_leakright"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
+                
+                <LinearLayout 
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_lefttire"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_lefttire"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_lefttemp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_lefttemp"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
+                
+                <LinearLayout 
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    
+                    <TextView
+                        android:id="@+id/tx_righttire"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.5"
+                        android:text="@string/tx_righttire"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
+                    
+                    <TextView 
+                        android:id="@+id/tx_righttemp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight= "0.5"
+                        android:text="@string/tx_righttemp"
+                        android:textAppearance="?android:attr/textAppearanceLarge"/>
+                    
+                </LinearLayout>
 
                 <View
                     android:layout_width="wrap_content"
@@ -178,7 +244,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@null"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceSmall" />
 
                 <View
                     android:layout_width="wrap_content"
@@ -193,15 +259,16 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:layout_weight="0.28"
+                        android:layout_weight="10"
                         android:orientation="vertical" >
 
                         <TextView
                             android:id="@+id/receiveview"
                             android:layout_width="match_parent"
-                            android:layout_height="275dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="10"
                             android:text="@null"
-                            android:textAppearance="?android:attr/textAppearanceLarge" />
+                            android:textAppearance="?android:attr/textAppearanceSmall" />
 
                     </LinearLayout>
 
