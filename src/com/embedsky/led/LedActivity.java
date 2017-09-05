@@ -159,7 +159,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private static int distance0; //get the first distance data
 	private static int disCnt; //distance counter
 	private static double fuelleveltemp = 100;
-	private static int cansendPid[] = {0x05,0x0C,0x0D,0x21,0x2F};  //can pid
+	private static int cansendPid[] = {0x05,0x0C,0x0D,0x21,0x2F};  //TODO can pid add
 	private static int canCnt; //can pid counter
 	private static tirePressure[] tirepressure = new tirePressure[2];
 
@@ -509,6 +509,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		public void run(){
 			//Mycan send
 			try{
+				//TODO can pid add
 				mycanservice.set_data(0,2);
 				mycanservice.set_data(1,1);
 				mycanservice.set_data(2,cansendPid[canCnt%5]);
@@ -552,7 +553,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	public class HeartpackTask extends TimerTask {
 		@Override
 		public void run(){
-			//TODO is not necessary
+			//not necessary
 			if(loginfo.haswarnGet().equals("0")){
 				for (int i = 0; i < warntypecnt.length; i++){
 					warntypecnt[i] = 0;
@@ -882,7 +883,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private class CanRev implements Runnable{
 	    @Override
 	    public void run(){
-    		//TODO
+    		//
 		    while(true){
 				try{
 					//Thread.sleep(1000);
@@ -941,7 +942,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
 						}
 					}
-					//TODO Compare status 
+					//Compare status 
 					//warnflagSet and mlocalcapture.setCapturePath(0)
 					//operate success or failed
 					loginfo.lockSet(lockstruct);
@@ -998,8 +999,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    				}else if(devid.equals("55667790")){
 	    					tx[12].setText(String.valueOf(leakstatusval));
 	    				}
-	    				//TODO Compare leakstatus and send 
-	    				if(leakstatusval > 64 && app.wirelessflag == 1){
+	    				// Compare leakstatus and send 
+	    				if(leakstatusval > 200 && app.wirelessflag == 1){
 	    					leakstatuscnt += 1;
 	    					if(warntypecnt[1] < 1 && leakstatuscnt > 20){
 	    						loginfo.haswarnSet("1");
@@ -1015,7 +1016,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    		}else if(flag.equals("02")){//weight data
 
 	    		}else if(flag.equals("03")){//power 
-	    			//TODO powerval upload to loginfo
+	    			// powerval upload to loginfo
 	    			int powerval = Integer.parseInt(data.get(9),16);
 	    			Log.d("Serials", "powerval: "+String.valueOf(powerval));
 	    			if(devid.equals("55667788")){	
@@ -1132,13 +1133,13 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					ArrayList<Integer> res =(ArrayList<Integer>) msg.obj;
 					//Log.d(LOG_TAG, res.toString());
 					int tirepos = res.get(0);
-					double tirepre = ((int)res.get(1))*8;
-					double tiretem = ((int)res.get(2)*256+(int)res.get(3))*0.03125-273;
-					double tirev = ((int)res.get(5)*256+(int)res.get(6))*0.1;
+					int tirepre = (int)res.get(1)*8;
+					double tiretem = ((int)res.get(3)*256+(int)res.get(2))*0.03125-273+40;
+					double tirev = ((int)res.get(6)*256+(int)res.get(5))*0.1;
 					int tiretype = res.get(7) >> 5;
 					if(tirepos < tirepressure.length){
-						tirepressure[tirepos].settireVal(String.format("%.3f",tirepre));
-						tx[13+tirepos*2].setText(String.format("%.3f",tirepre));
+						tirepressure[tirepos].settireVal(String.valueOf(tirepre));
+						tx[13+tirepos*2].setText(String.valueOf(tirepre));
 						tirepressure[tirepos].settireTempVal(String.format("%.2f", tiretem));
 						tx[14+tirepos*2].setText(String.format("%.2f", tiretem));
 					}
@@ -1148,7 +1149,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						 	//+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 						//tLogView.append(Long.toHexString(id)+" "+tirepos+" "+tirepre+"kPa "+tiretem+"\u00b0"+"C "+tirev+"Pa/s "+tiretype+"\n");
 					}
-					//TODO Compare the tirevalue and tiretemperature
+					// Compare the tirevalue and tiretemperature
 				}else if(id == 0x18FEF533){
 					if(warntypecnt[3] < 2){
 						loginfo.haswarnSet("1");
@@ -1161,6 +1162,8 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					ArrayList<Integer> res = (ArrayList<Integer>) msg.obj;
 					int pid = res.get(2);
 					switch (pid){
+						//TODO pid add
+						//case 0x04: int loadval = (int)res.get(3)
 						case 0x05: int temp = (int)res.get(3)-40;
 							  if(tLogView != null){
 								//Log.d("OBD", Long.toHexString(id)+" "+Integer.toHexString(pid)+" "+String.valueOf(temp)+"\u00b0"+"C\n");
@@ -1207,7 +1210,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 							  break;
 						case 0x2F: double fuelLevel = (int)res.get(3)*100/255;
 							  loginfo.fuelvolSet(fuelLevel);
-							  //TODO To Compare the fuellevel and send
+							  // To Compare the fuellevel and send
 							  if(fuelLevel - fuelleveltemp > 1){
 							  	if(warntypecnt[4] < 1 ) {
 							  		loginfo.typeflagSet("4");
@@ -1281,7 +1284,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	
 	@Override
     public boolean onKeyUp(int keyCode, KeyEvent event){
-    	// TODO Auto-generated method stub	
+    	// Auto-generated method stub	
 		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
 			lockstruct[0].setlockStatus("on");
 			tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
@@ -1304,7 +1307,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event){
-    	// TODO Auto-generated method stub
+    	// Auto-generated method stub
   
 		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
 			lockstruct[0].setlockStatus("off");

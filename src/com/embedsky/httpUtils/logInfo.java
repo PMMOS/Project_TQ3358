@@ -9,7 +9,7 @@ import org.json.JSONException;
 
 public class logInfo{
 	private static final String LOG_TAG = "lock";
-
+	//TODO add new can pid value
 	private int logtype;
 	private String trucknumber;
 

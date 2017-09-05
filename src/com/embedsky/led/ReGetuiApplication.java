@@ -102,7 +102,7 @@ public class ReGetuiApplication extends Application {
                             }
                         }break;
                         case 8: {
-                            //TODO close the lock   
+                            // close the lock   
                             wirelessflag = 1;
                             for(int i = 0; i < 5; i++){
                                 //ReActivity.lockstatustemp[0] = "1";
@@ -113,7 +113,7 @@ public class ReGetuiApplication extends Application {
                             }
                         }break;
                         case 9: {
-                            //TODO  close the lock
+                            // close the lock
                             wirelessflag = 0;
                             for(int i = 0; i < 5; i++){
                                 //ReActivity.lockstatustemp[0] = "1";
@@ -192,7 +192,7 @@ public class ReGetuiApplication extends Application {
     							ReActivity.time.cancel();
     						}
     						//ReActivity.time = new Timer();
-    						//TODO All message send and captureImg
+    						// All message send and captureImg
                             ReActivity.loginfo.logtypeSet(1);
                             ReActivity.loginfo.typeflagSet("0");
                             ReActivity.sidcnt = 0;
@@ -212,12 +212,12 @@ public class ReGetuiApplication extends Application {
     						ReActivity.time = new Timer();
                             ReActivity.paramspacktask = ReActivity.new ParamspackTask();
                             ReActivity.time.schedule(ReActivity.paramspacktask, 5000, 30000);
-    						//TODO Send params tirepressure tiretemp
+    						// Send params tirepressure tiretemp
     					}break;
     					default: break;
     				}  				      					  				
     			} catch (JSONException e) {
-    				// TODO Auto-generated catch block
+    				// Auto-generated catch block
     				e.printStackTrace();
     			}
     			Log.d(LOG_TAG, (String) msg.obj);

@@ -158,7 +158,7 @@ public class OnscreenPlayFragment extends Fragment implements OnClickListener, O
 
 	@Override
 	public void onStart(){
-		//TODO data get
+		// data get
 		super.onStart();
 		type = getArguments().getInt("type", 0);
 		if(type == 0){
