@@ -72,34 +72,34 @@ public class ReGetuiApplication extends Application {
                     int tp = Integer.parseInt(type);
     				switch(tp){
     					case 1: {
-                            if(ReActivity.heartpacktask != null){
-                                ReActivity.heartpacktask.cancel();
-                            }
-                            if(ReActivity.warnpacktask != null){
-                                ReActivity.warnpacktask.cancel();
-                            }
-    						if(ReActivity.time != null){
-    							ReActivity.time.cancel();
-    						}
-                            ReActivity.loginfo.logtypeSet(0);
-                            ReActivity.warnmsgbuf.clear();
-    						ReActivity.time = new Timer();
-                            ReActivity.heartpacktask = ReActivity.new HeartpackTask();
-                            ReActivity.warnpacktask = ReActivity.new WarnpackTask();
-    						ReActivity.time.schedule(ReActivity.heartpacktask, 5000, 60000);
-                            ReActivity.time.schedule(ReActivity.warnpacktask, 6000, 20000);
+                            // if(ReActivity.heartpacktask != null){
+                            //     ReActivity.heartpacktask.cancel();
+                            // }
+          //                   if(ReActivity.warnpacktask != null){
+          //                       ReActivity.warnpacktask.cancel();
+          //                   }
+    						// if(ReActivity.time != null){
+    						// 	ReActivity.time.cancel();
+    						// }
+                            // ReActivity.loginfo.logtypeSet(0);
+          //                   ReActivity.warnmsgbuf.clear();
+    						// ReActivity.time = new Timer();
+                            // ReActivity.heartpacktask = ReActivity.new HeartpackTask();
+                            // ReActivity.warnpacktask = ReActivity.new WarnpackTask();
+    						// ReActivity.time.schedule(ReActivity.heartpacktask, 5000, 60000);
+                            // ReActivity.time.schedule(ReActivity.warnpacktask, 6000, 20000);
                             
     					}break;
                         case 2: {
-                            if(ReActivity.heartpacktask != null){
-                                ReActivity.heartpacktask.cancel();
-                            }
-                            if(ReActivity.warnpacktask != null){
-                                ReActivity.warnpacktask.cancel();
-                            }
-                            if(ReActivity.time != null){
-                                ReActivity.time.cancel();
-                            }
+                            // if(ReActivity.heartpacktask != null){
+                            //     ReActivity.heartpacktask.cancel();
+                            // }
+                            // // if(ReActivity.warnpacktask != null){
+                            //     ReActivity.warnpacktask.cancel();
+                            // }
+                            // if(ReActivity.time != null){
+                            //     ReActivity.time.cancel();
+                            // }
                         }break;
                         case 8: {
                             // close the lock   
@@ -133,9 +133,10 @@ public class ReGetuiApplication extends Application {
                                     //for(int i = 0; i < 1; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[1]+"|"+"00");
                                         Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
-                                        ReActivity.lockstatustemp[3] = "0";
+                                        
                                     //}
 		        				}
+                                ReActivity.lockstatustemp[3] = "0";
 		        				
 	        				}else if(operate.equals("1")){
 			        			//temp = true;
@@ -145,9 +146,10 @@ public class ReGetuiApplication extends Application {
                                     //for(int i = 0; i < 1; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[1]+"|"+"01");
                                         Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
-                                        ReActivity.lockstatustemp[3] = "1";
+                                        
                                     //}
 		        				}
+                                ReActivity.lockstatustemp[3] = "1";
 			        		}else if(operate.equals("2")){
 			        			//temp = true;
 			        			//temp = ReActivity.ledSetOn(2);
@@ -156,9 +158,10 @@ public class ReGetuiApplication extends Application {
                                     //for(int i = 1; i < 3; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[2]+"|"+"00");
                                         Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
-                                        ReActivity.lockstatustemp[4] = "0";
                                     //}
                                 }
+                                ReActivity.lockstatustemp[4] = "0";
+
 			        		}else if(operate.equals("3")){
 			        			//temp = true;
 			        			//temp = ReActivity.ledSetOff(2);
@@ -167,9 +170,10 @@ public class ReGetuiApplication extends Application {
                                     //for(int i = 1; i < 3; i++){
                                         ReActivity.serialssendbuf.add(lockdevid[2]+"|"+"01");
                                         Log.d(LOG_TAG, ReActivity.serialssendbuf.get(i));
-                                        ReActivity.lockstatustemp[4] = "1";
+                                        
                                     //}
                                 }
+                                ReActivity.lockstatustemp[4] = "1";
 			        		}
 			        		//int ope = temp?1:0;
                             if(!command.isNull("sid")){

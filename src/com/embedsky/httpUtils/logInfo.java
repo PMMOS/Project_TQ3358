@@ -44,7 +44,7 @@ public class logInfo{
 	
 	public logInfo(){
 		super();
-		trucknumber = "川C1234";
+		trucknumber = "川C5678";
 		haswarn = "0";
 		warntype = "0";
 		speed = 0;

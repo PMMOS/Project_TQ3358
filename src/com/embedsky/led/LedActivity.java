@@ -111,6 +111,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private final int MESSAGE_LOCKCMDOPERATE = 0x106;
 	private final int MESSAGE_USB_INSERT = 0x107;
 	private final int MESSAGE_USB_UNINSERT = 0x108;
+	private final int MESSAGE_OPPARAMS = 0x109;
 
 	//初始化led
 	public static native boolean ledInit();
@@ -124,11 +125,13 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	private String url="http://120.76.219.196:85/trucklogs/add_log";
 	//private String url="http://192.168.10.87:8080/MyWeb/MyServlet";
 	private String getuiurl = "http://120.76.219.196:85/getui/postcid";
-	private String picurl = "http://120.76.219.196:80/file/upload";
+	private String picurl = "http://120.76.219.196:85/file/upload";
 	private String testurl = "http://120.76.219.196:85/test/getTruckLogResp";
+	private String opurl = "http://120.76.219.196:85/lock/request_car";
 
 	private static HashMap<String, String> params = new HashMap<String, String>();
 	private static HashMap<String, String> cidparams = new HashMap<String, String>(); 
+	private static HashMap<String, String> opparams = new HashMap<String, String>();
 	protected static logInfo loginfo = new logInfo(); //data package uploaded
 	private static int[] warntypecnt = new int[10];
 	protected static LinkedList<HashMap<String, String>> warnmsgbuf = new LinkedList<HashMap<String, String>>();
@@ -255,7 +258,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		loginfo.tireSet(tirepressure);
 		
 		for (int i = 0; i < 5; i++){
-			lockstatustemp[i] = "0";
+			lockstatustemp[i] = "1";
 		}
 
 		for (int i = 0; i < warntypecnt.length; i++){
@@ -290,7 +293,7 @@ public class LedActivity extends Activity implements mPictureCallBack{
 		//String cid = new String();
 		if(cid != null){
 			//tLogView.append(cid);
-			cidparams.put("trucknumber","川C1234");
+			cidparams.put("trucknumber","川C5678");
 			cidparams.put("type", "100");
 			cidparams.put("cid", cid);
 			Log.d(LOG_TAG, cid);
@@ -412,12 +415,12 @@ public class LedActivity extends Activity implements mPictureCallBack{
         }
 		
 		//timer.schedule(task, 5000, 60000); // 5s后执行task,经过60s再次执行
-		//heartpacktask = new HeartpackTask();
-		//warnpacktask = new WarnpackTask();
+		heartpacktask = new HeartpackTask();
+		warnpacktask = new WarnpackTask();
 		sendtime.schedule(cansendtask, 1000, 1000);
 		sendtime.schedule(serialssendtask, 1500, 1000);
-		//time.schedule(heartpacktask, 5000, 60000);
-		//time.schedule(warnpacktask, 6000, 20000);
+		time.schedule(heartpacktask, 60000, 60000);
+		time.schedule(warnpacktask, 6000, 20000);
 	}
 
 	//init USB to serials
@@ -466,11 +469,11 @@ public class LedActivity extends Activity implements mPictureCallBack{
 					inputfile.read(buf);
 					inputfile.close();
 					String picdata = base64encoder.encode(buf);
-					//Log.d(LOG_TAG,"encode success");
+					Log.d(LOG_TAG,"encode success");
 					//Log.d(LOG_TAG, String.valueOf(picdata.length()));
 					picUpload picupload = new picUpload(picdata, "png");
 					byte[] outbuffer = picdata.getBytes();
-					//Log.d(LOG_TAG,String.valueOf(outbuffer.length));
+					Log.d(LOG_TAG,String.valueOf(outbuffer.length));
 					outputfile.write(outbuffer);
 					//outputfile.write(base64decoder.decodeBuffer(picdata));
 					outputfile.close();
@@ -916,32 +919,88 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    		Log.d("Serials", data.toString());
 	    		String flag = data.get(8);
 	    		String devid = data.get(4)+data.get(5)+data.get(6)+data.get(7);
-	    		if(flag.equals("00") && (!data.get(1).equals("05"))){
-	    			if(devid.equals("55667788")){	
-	    				if(data.get(9).equals("00")){
-							lockstruct[0].setlockStatus("0");
-							tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
-						}else if(data.get(9).equals("01")){
-							lockstruct[0].setlockStatus("1");
-							tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
+	    		if(flag.equals("00")){
+	    			if(!data.get(1).equals("05")){
+	    				if(devid.equals("55667788")){	
+		    				if(data.get(9).equals("00")){
+								lockstruct[0].setlockStatus("0");
+								tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
+							}else if(data.get(9).equals("01")){
+								lockstruct[0].setlockStatus("1");
+								tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
+							}
+						}else if(devid.equals("55667789")){
+							if(data.get(9).equals("00")){
+								lockstruct[3].setlockStatus("0");
+								tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
+							}else if(data.get(9).equals("01")){
+								lockstruct[3].setlockStatus("1");
+								tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
+							}
+						}else if(devid.equals("55667790")){
+							if(data.get(9).equals("00")){
+								lockstruct[4].setlockStatus("0");
+								tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
+							}else if(data.get(9).equals("01")){
+								lockstruct[4].setlockStatus("1");
+								tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
+							}
 						}
-					}else if(devid.equals("55667789")){
-						if(data.get(9).equals("00")){
-							lockstruct[3].setlockStatus("0");
-							tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
-						}else if(data.get(9).equals("01")){
-							lockstruct[3].setlockStatus("1");
-							tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
+	    			}else if(data.get(1).equals("05")){
+	    				opparams.put("trucknumber", "川C5678");
+	    				if(devid.equals("55667788")){	
+		    				if(data.get(9).equals("00")){
+								//TODO
+							}else{
+								lockstruct[0].setlockStatus("1");
+								tx[0].setText(lockstruct[0].getlockName()+"\t"+lockstruct[0].getlockStatus());
+							}
+						}else if(devid.equals("55667789")){
+							if(data.get(9).equals("00")){
+								opparams.put("type", "0");
+								httpUtils.doPostAsyn(opurl, opparams, new httpUtils.HttpCallBackListener() {
+						            @Override
+						            public void onFinish(String result) {
+						                Message message = new Message();
+						                message.what = MESSAGE_OPPARAMS;
+						                message.obj=result;
+						                handler.sendMessage(message);  
+						            }
+
+						            @Override
+						            public void onError(Exception e) {
+						            }
+
+						    	});
+							}else{
+								lockstatustemp[3] = "1";
+								lockstruct[3].setlockStatus("1");
+								tx[3].setText(lockstruct[3].getlockName()+"\t"+lockstruct[3].getlockStatus());
+							}
+						}else if(devid.equals("55667790")){
+							if(data.get(9).equals("00")){
+								opparams.put("type", "2");
+								httpUtils.doPostAsyn(opurl, opparams, new httpUtils.HttpCallBackListener() {
+						            @Override
+						            public void onFinish(String result) {
+						                Message message = new Message();
+						                message.what = MESSAGE_OPPARAMS;
+						                message.obj=result;
+						                handler.sendMessage(message);  
+						            }
+
+						            @Override
+						            public void onError(Exception e) {
+						            }
+
+						    	});
+							}else{
+								lockstatustemp[4] = "1";
+								lockstruct[4].setlockStatus("1");
+								tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
+							}
 						}
-					}else if(devid.equals("55667790")){
-						if(data.get(9).equals("00")){
-							lockstruct[4].setlockStatus("0");
-							tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
-						}else if(data.get(9).equals("01")){
-							lockstruct[4].setlockStatus("1");
-							tx[4].setText(lockstruct[4].getlockName()+"\t"+lockstruct[4].getlockStatus());
-						}
-					}
+	    			}
 					//Compare status 
 					//warnflagSet and mlocalcapture.setCapturePath(0)
 					//operate success or failed
@@ -956,17 +1015,17 @@ public class LedActivity extends Activity implements mPictureCallBack{
 						}
 					}
 					if(app.lockoperateflag == 0){
-						if(lockwarncnt > 20 && app.wirelessflag == 1){
+						if(lockwarncnt > 0 && app.wirelessflag == 1){
 							if(warntypecnt[1] < 1) {
 								loginfo.typeflagSet("1");
 								sidcnt = 0;
 								mlocalcapture.setCapturePath(0);
 								warntypecnt[1] += 1;
 							}
-							lockwarncnt = 20;
+							lockwarncnt = 0;
 						}
 					}else{
-						if(lockwarncnt > 20) {
+						if(lockwarncnt > 0) {
 							app.reparams.put("operate", "1"); //operate failed
 							lockwarncnt = 0;
 						}else{
@@ -1000,13 +1059,13 @@ public class LedActivity extends Activity implements mPictureCallBack{
 	    					tx[12].setText(String.valueOf(leakstatusval));
 	    				}
 	    				// Compare leakstatus and send 
-	    				if(leakstatusval > 200 && app.wirelessflag == 1){
+	    				if(leakstatusval > 95 && app.wirelessflag == 1){
 	    					leakstatuscnt += 1;
-	    					if(warntypecnt[1] < 1 && leakstatuscnt > 20){
+	    					if(warntypecnt[2] < 1 && leakstatuscnt > 0){
 	    						loginfo.haswarnSet("1");
 	    						loginfo.typeSet("2");
 	    						warnmsgbuf.add(loginfo.logInfoGet());
-	    						warntypecnt[1] += 1;
+	    						warntypecnt[2] += 1;
 	    						leakstatuscnt = 0;
 	    					}
 	    				}else{
@@ -1108,6 +1167,10 @@ public class LedActivity extends Activity implements mPictureCallBack{
     			case MESSAGE_LOCKCMDOPERATE: {
     				String s =(String) msg.obj;
     				Log.d(LOG_TAG, "lockcmd"+s);
+    			}break;
+    			case MESSAGE_OPPARAMS: {
+    				String s =(String) msg.obj;
+    				Log.d(LOG_TAG, "opparams"+s);
     			}break;
     			case MESSAGE_USB_INSERT: {
     				initUSB();
@@ -1262,73 +1325,6 @@ public class LedActivity extends Activity implements mPictureCallBack{
 			}
 		}
 	};
-
-	/*
-	@Override
-	public boolean dispatchKeyEvent(KeyEvent event) {
-		int keyCode = event.getKeyCode();
-		if(KeyEvent.KEYCODE_ENTER==keyCode&& event.getAction() == KeyEvent.ACTION_DOWN)
-		{
-			lockstruct[4].setlockStatus("off");
-			tx[4].setText("lock"+lockstruct[4].getlockName()+"\t\t"+lockstruct[4].getlockStatus());
-			return true;
-		}else if(KeyEvent.KEYCODE_ENTER==keyCode&& event.getAction() == KeyEvent.ACTION_UP){		
-			lockstruct[4].setlockStatus("on");
-			tx[4].setText("lock"+lockstruct[4].getlockName()+"\t\t"+lockstruct[4].getlockStatus());
-			return true;
-		}
-
-		return super.dispatchKeyEvent(event);  
-	} 
-	
-	
-	@Override
-    public boolean onKeyUp(int keyCode, KeyEvent event){
-    	// Auto-generated method stub	
-		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-			lockstruct[0].setlockStatus("on");
-			tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
-			return true;
-		} else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-			lockstruct[1].setlockStatus("on");
-			tx[1].setText("lock"+lockstruct[1].getlockName()+"\t\t"+lockstruct[1].getlockStatus());
-			return true;
-		} else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-			lockstruct[2].setlockStatus("on");
-			tx[2].setText("lock"+lockstruct[2].getlockName()+"\t\t"+lockstruct[2].getlockStatus());
-			return true;
-		} else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-			lockstruct[3].setlockStatus("on");
-			tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
-			return true;
-		} 			
-		return super.onKeyUp(keyCode, event);
-    }
-    
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event){
-    	// Auto-generated method stub
-  
-		if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-			lockstruct[0].setlockStatus("off");
-			tx[0].setText("lock"+lockstruct[0].getlockName()+"\t\t"+lockstruct[0].getlockStatus());
-			return true;
-		} else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-			lockstruct[1].setlockStatus("off");
-			tx[1].setText("lock"+lockstruct[1].getlockName()+"\t\t"+lockstruct[1].getlockStatus());
-			return true;
-		} else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-			lockstruct[2].setlockStatus("off");
-			tx[2].setText("lock"+lockstruct[2].getlockName()+"\t\t"+lockstruct[2].getlockStatus());
-			return true;
-		} else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-			lockstruct[3].setlockStatus("off");
-			tx[3].setText("lock"+lockstruct[3].getlockName()+"\t\t"+lockstruct[3].getlockStatus());
-			return true;
-		} 
-		
-		return super.onKeyDown(keyCode, event);
-    }*/
     
     @Override
     protected void onDestroy(){
